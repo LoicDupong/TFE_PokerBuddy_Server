@@ -1,0 +1,28 @@
+{
+  "name": "06-exo-guestbook",
+  "version": "1.0.0",
+  "description": "Exo API Express Guestbook",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/app.js",
+    "dev": "nodemon --env-file=.env src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Express",
+    "NodeJS",
+    "API"
+  ],
+  "author": "LD",
+  "license": "ISC",
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
