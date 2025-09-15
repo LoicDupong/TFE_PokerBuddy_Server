@@ -1,7 +1,7 @@
 {
-  "name": "06-exo-guestbook",
+  "name": "pokerbuddy_server",
   "version": "1.0.0",
-  "description": "Exo API Express Guestbook",
+  "description": "TFE - PokerBuddy Home Poker sessions management",
   "main": "src/app.js",
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
   "keywords": [
     "Express",
     "NodeJS",
-    "API"
+    "API",
+    "PokerBuddy"
   ],
   "author": "LD",
   "license": "ISC",
@@ -20,7 +21,10 @@
     "argon2": "^0.44.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
