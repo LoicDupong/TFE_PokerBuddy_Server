@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "username": "Alice",
+    "email": "alice@mail.com",
+    "password": "hashed",
+    "avatar": "https://example.com/avatars/alice.png",
+    "description": "Casual player, loves friendly games",
+    "gamePlayed": 12,
+    "gameWon": 4
+  },
+  {
+    "id": 2,
+    "username": "Bob",
+    "email": "bob@mail.com",
+    "password": "hashed",
+    "avatar": "https://example.com/avatars/bob.png",
+    "description": "Competitive player",
+    "gamePlayed": 9,
+    "gameWon": 6
+  },
+  {
+    "id": 3,
+    "username": "Charlie",
+    "email": "charlie@mail.com",
+    "password": "hashed",
+    "avatar": "https://example.com/avatars/charlie.png",
+    "description": "Beginner learning the ropes",
+    "gamePlayed": 5,
+    "gameWon": 1
+  }
+]
