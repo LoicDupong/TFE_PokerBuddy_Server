@@ -6,8 +6,7 @@
     "password": "hashed",
     "avatar": "https://example.com/avatars/alice.png",
     "description": "Casual player, loves friendly games",
-    "gamePlayed": 12,
-    "gameWon": 4
+    "gamePlayed": 12
   },
   {
     "id": 2,
@@ -16,8 +15,7 @@
     "password": "hashed",
     "avatar": "https://example.com/avatars/bob.png",
     "description": "Competitive player",
-    "gamePlayed": 9,
-    "gameWon": 6
+    "gamePlayed": 9
   },
   {
     "id": 3,
@@ -26,7 +24,6 @@
     "password": "hashed",
     "avatar": "https://example.com/avatars/charlie.png",
     "description": "Beginner learning the ropes",
-    "gamePlayed": 5,
-    "gameWon": 1
+    "gamePlayed": 5
   }
 ]

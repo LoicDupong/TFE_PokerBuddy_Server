@@ -1,6 +1,7 @@
 import express from 'express';
 import { apiRouter } from './routers/index.js';
 import morgan from 'morgan';
+import cors from 'cors';
 
 // Variable d'en
 const { NODE_ENV, PORT } = process.env;
@@ -9,8 +10,12 @@ const { NODE_ENV, PORT } = process.env;
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
+
+// Static files (images, etc.)
+app.use('/public', express.static('public'));
 
 // Routing
 app.use('/api', apiRouter);

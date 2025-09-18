@@ -37,16 +37,6 @@ export default function userModel(sequelize) {
             allowNull: true,
             defaultValue: null,
         },
-        gamePlayed: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-        },
-        gameWon: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-        }
     }, {
         tableName: 'users',
         timestamps: true,

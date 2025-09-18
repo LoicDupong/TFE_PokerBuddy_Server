@@ -1,6 +1,7 @@
 import { Router } from "express";
-import helloWorldRouter from "./hello-world.route.js";
+import authRouter from "./auth.route.js";
 
 export const apiRouter = Router();
 
-apiRouter.use('/message', helloWorldRouter);
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/user', userRouter);

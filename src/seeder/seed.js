@@ -27,12 +27,10 @@ async function seederInsert() {
         username: u.username,
         avatar: u.avatar ?? null,
         description: u.description ?? null,
-        gamePlayed: u.gamePlayed ?? 0,
-        gameWon: u.gameWon ?? 0,
     }));
 
     await db.User.bulkCreate(rowsUsers, {
-        updateOnDuplicate: ['email', 'password', 'username', 'avatar', 'description', 'gamePlayed', 'gameWon']
+        updateOnDuplicate: ['email', 'password', 'username', 'avatar', 'description']
     });
 
     // Liaison Game / User (host et winner)
@@ -44,16 +42,9 @@ async function seederInsert() {
             { where: { username: g.host } }
         );
 
-        const winnerInstance = await db.User.findOne(
-            { where: { username: g.winner } }
-        );
-
-        // 
+        // Set host
         if (hostInstance) {
             await gameInstance.setHost(hostInstance);
-        }
-        if (winnerInstance) {
-            await gameInstance.setWinner(winnerInstance);
         }
     }
 
@@ -102,6 +93,7 @@ async function seederInsert() {
     await db.GameResult.bulkCreate(rowsResults, {
         updateOnDuplicate: ["rank", "prize", "gameId", "userId"],
     });
+
 
     console.log("✅ Seed data inserted successfully.");
 }
