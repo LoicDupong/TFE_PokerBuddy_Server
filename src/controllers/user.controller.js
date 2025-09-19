@@ -29,18 +29,21 @@ const userController = {
     }
   },
 
-  updateUser: async (req, res) => {
+  me: async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    res.status(200).json({
+      user: { id: req.user.id, username: req.user.username, email: req.user.email },
+    });
+  },
+
+  updateMe: async (req, res) => {
     try {
+
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-      const { id } = req.params;
-
-      // ✅ Comparaison avec BIGINT
-      if (Number(req.user.id) !== Number(id)) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-
+      
       const { username, email, avatar, description } = req.body;
-      const user = await db.User.findByPk(id);
+      const user = await db.User.findByPk(req.user.id);
 
       if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -61,7 +64,7 @@ const userController = {
     }
   },
 
-  deleteUser: async (req, res) => {
+  deleteMe: async (req, res) => {
     try {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id } = req.params;

@@ -10,9 +10,6 @@ authRouter.route('/register')
 authRouter.route('/login')
     .post(authController.login);
 
-authRouter.route('/logout')
-    .post(authorizeMiddleware(), authController.logout);
-
 authRouter.route('/update-pwd')
     .post(authorizeMiddleware(), authController.updatePassword);
 

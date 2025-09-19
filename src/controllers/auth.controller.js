@@ -64,11 +64,6 @@ const authController = {
         res.status(200).json({ user, loginToken: loginToken });
     },
 
-    logout: async (req, res) => {
-        // Dans le cas d'une authentification par token JWT, pas de gestion de session côté serveur
-        res.status(200).json({ message: "Logout successfull" });
-    },
-
     me: async (req, res) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 

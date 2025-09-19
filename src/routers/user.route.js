@@ -7,8 +7,12 @@ const userRouter = Router();
 userRouter
   .route("/:id")
   .get(userController.getUser)
-  .put(authorizeMiddleware(), userController.updateUser)
-  .delete(authorizeMiddleware(), userController.deleteUser);
+
+userRouter
+  .route("/me")
+  .get(authorizeMiddleware(), userController.me)
+  .put(authorizeMiddleware(), userController.updateMe)
+  .delete(authorizeMiddleware(), userController.deleteMe);
 
 userRouter.route("/")
   .get(userController.getAllUsers);

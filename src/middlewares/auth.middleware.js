@@ -5,8 +5,8 @@ import { decodeToken } from "../utils/jwt.utils.js";
 export function authMiddleware() {
     return async (req, res, next) => {
         // Récupération du token dans le header Authorization
-        const authData = req.headers['authorization'];
-        
+        const authData = req.headers['authorization'] ?? '';
+
         // Extraction du token
         const [prefix, token] = authData.split(' ');
 
