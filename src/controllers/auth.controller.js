@@ -1,22 +1,7 @@
 import argon2 from "argon2";
 import { generateToken } from "../utils/jwt.utils.js";
-import { v4 as uuidv4 } from "sequelize";
+import db from "../models/index.js";
 
-const users = [
-    {
-        id: uuidv4(),
-        username: "admin",
-        email: "admin@email.com",
-        password: "$argon2id$v=19$m=65536,t=3,p=4$Z3Vlc3Q$X8m0u7+5r7T6Hc9vY1Y5cQ",
-    }, // mot de passe = azerty
-    {
-        id: uuidv4(),
-        username: "user1",
-        email: "user1@email.com",
-        password: "$argon2id$v=19$m=65536,t=3,p=4$Z3Vlc3Q$X8m0u7+5r7T6Hc9vY1Y5cQ",
-    }, // mot de passe = azerty
-
-];
 
 const authController = {
 
@@ -27,7 +12,9 @@ const authController = {
             return res.status(400).json({ error: "Email or password missing !" });
         }
 
-        const userExists = users.find(user => user.email === email);
+        const userExists = await db.User.findOne({ where: { email : email } });
+        
+        
         if (userExists) {
             return res.status(409).json({ error: "User already exists !" });
         }
@@ -36,17 +23,22 @@ const authController = {
         const hash = await argon2.hash(password);
         console.log(hash);
 
-        const newUser = {
-            id: uuidv4(),
+        // Création de l'utilisateur
+        const newUser = await db.User.create({
             username,
             email,
             password: hash
-        };
+        });
 
-        users.push(newUser);
         const token = await generateToken(newUser);
 
-        res.status(201).json({ user: newUser, token });
+        //* Ne pas renvoyer le hash en prod
+        const { password: _, ...safeUser } = newUser.get({ plain: true });
+        res.status(201).json({
+            user: process.env.NODE_ENV === "dev" ? newUser : safeUser,
+            token
+        });
+
 
 
     },
@@ -54,7 +46,7 @@ const authController = {
     login: async (req, res) => {
         const { email, password } = req.body;
 
-        const user = users.find(user => user.email === email);
+        const user = await db.User.findOne({ where: { email : email } });
 
         if (!user) {
             res.status(401).json({ error: "User not found !" });
@@ -67,9 +59,9 @@ const authController = {
         }
 
         // Génération du token
-        const token = await generateToken(user);
+        const loginToken = await generateToken(user);
 
-        res.status(200).json({ user, token });
+        res.status(200).json({ user, loginToken: loginToken });
     },
 
     logout: async (req, res) => {
@@ -86,20 +78,27 @@ const authController = {
     },
 
     updatePassword: async (req, res) => {
-        const { oldPassword, newPassword } = req.body;
-        const user = users.find(u => u.id === req.user.id);
+        try {
+            const { oldPassword, newPassword } = req.body;
 
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            const user = await db.User.findByPk(req.user.id);
+            if (!user) {
+                return res.status(404).json({ error: "User not found" });
+            }
+
+            const validPassword = await argon2.verify(user.password, oldPassword);
+            if (!validPassword) {
+                return res.status(401).json({ error: "Old password invalid" });
+            }
+
+            const newHash = await argon2.hash(newPassword);
+            await user.update({ password: newHash });
+
+            res.status(200).json({ message: "Password updated successfully" });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: "Error updating password" });
         }
-
-        if (!(await argon2.verify(user.password, oldPassword))) {
-            return res.status(401).json({ error: "Old password invalid" });
-        }
-
-        user.password = await argon2.hash(newPassword);
-
-        res.status(200).json({ message: "Password updated successfully" });
     },
 };
 

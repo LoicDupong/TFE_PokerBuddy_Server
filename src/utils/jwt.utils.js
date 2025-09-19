@@ -14,7 +14,7 @@ export function generateToken({ id, username, role }) {
         //? La configuration du token
         const option = {
             algorithm: 'HS512',
-            expiresIn: '1h', // vercel/ms
+            expiresIn: '3h', // vercel/ms
             issuer: process.env.JWT_ISSUER,
             audience: process.env.JWT_AUDIENCE
         };

@@ -1,5 +1,7 @@
 // ## Authentification Middleware
 
+import { decodeToken } from "../utils/jwt.utils.js";
+
 export function authMiddleware() {
     return async (req, res, next) => {
         // Récupération du token dans le header Authorization

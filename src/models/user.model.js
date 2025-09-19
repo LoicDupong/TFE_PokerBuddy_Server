@@ -8,10 +8,9 @@ export default function userModel(sequelize) {
 
     const User = sequelize.define('User', {
         id: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
-            autoIncrement: true,
-            autoIncrementIdentity: true
         },
         email: {
             type: DataTypes.STRING,

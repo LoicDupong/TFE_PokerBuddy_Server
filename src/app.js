@@ -2,6 +2,7 @@ import express from 'express';
 import { apiRouter } from './routers/index.js';
 import morgan from 'morgan';
 import cors from 'cors';
+import { authMiddleware } from './middlewares/auth.middleware.js';
 
 // Variable d'en
 const { NODE_ENV, PORT } = process.env;
@@ -18,7 +19,7 @@ app.use(express.json());
 app.use('/public', express.static('public'));
 
 // Routing
-app.use('/api', apiRouter);
+app.use('/api', authMiddleware(), apiRouter);
 
 // Start
 app.listen(PORT, (error) => {

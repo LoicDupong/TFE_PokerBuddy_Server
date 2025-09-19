@@ -7,10 +7,9 @@ import { DataTypes, Sequelize } from "sequelize";
 export default function gameResultModel(sequelize) {
     const GameResult = sequelize.define('GameResult', {
         id: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
-            autoIncrement: true,
-            autoIncrementIdentity: true
         },
         rank: {
             type: DataTypes.INTEGER,
@@ -22,7 +21,7 @@ export default function gameResultModel(sequelize) {
             defaultValue: 0,
         },
         gameId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
             allowNull: false,
             references: {
                 model: 'game',
@@ -32,7 +31,7 @@ export default function gameResultModel(sequelize) {
             onUpdate: 'CASCADE',
         },
         userId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
             allowNull: false,
             references: {
                 model: 'users',

@@ -11,13 +11,13 @@ authRouter.route('/login')
     .post(authController.login);
 
 authRouter.route('/logout')
-    .post(authorizeMiddleware, authController.logout);
+    .post(authorizeMiddleware(), authController.logout);
 
 authRouter.route('/update-pwd')
-    .post(authorizeMiddleware, authController.updatePassword);
+    .post(authorizeMiddleware(), authController.updatePassword);
 
 authRouter.route('/me')
-    .get(authorizeMiddleware, authController.me);
+    .get(authorizeMiddleware(), authController.me);
 
 
 export default authRouter;

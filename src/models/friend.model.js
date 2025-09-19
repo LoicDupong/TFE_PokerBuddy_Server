@@ -7,13 +7,12 @@ export default function friendModel(sequelize) {
 
     const Friend = sequelize.define('Friend', {
         id: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
-            autoIncrement: true,
-            autoIncrementIdentity: true
         },
         userId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
             allowNull: false,
             references: {
                 model: 'users',
@@ -23,7 +22,7 @@ export default function friendModel(sequelize) {
             onUpdate: 'CASCADE',
         },
         friendId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
             allowNull: false,
             references: {
                 model: 'users',

@@ -12,7 +12,7 @@ try {
     await db.sequelize.sync({ force: true });
     console.log("All models were synchronized successfully.");
 
-    await seederInsert();
+    // await seederInsert();
 
 }
 catch (error) {

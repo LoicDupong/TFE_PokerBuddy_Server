@@ -8,10 +8,9 @@ export default function gameModel(sequelize) {
 
     const Game = sequelize.define('Game', {
         id: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
-            autoIncrement: true,
-            autoIncrementIdentity: true
         },
         name: {
             type: DataTypes.STRING,
@@ -60,7 +59,7 @@ export default function gameModel(sequelize) {
             allowNull: false,
         },
         hostId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.UUID,
             allowNull: false,
             references: {
                 model: 'users',

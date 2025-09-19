@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "name": "Friday Night Poker",
     "dateStart": "2025-09-17T20:00:00Z",
     "dateEnd": null,
@@ -10,11 +9,9 @@
     "placesPaid": 3,
     "description": "Friendly poker night at Alice's place",
     "bigBlind": 2,
-    "smallBlind": 1,
-    "hostId": 1
+    "smallBlind": 1
   },
   {
-    "id": 2,
     "name": "Sunday Tournament",
     "dateStart": "2025-09-21T18:00:00Z",
     "dateEnd": null,
@@ -24,11 +21,9 @@
     "placesPaid": 5,
     "description": "Weekly Sunday poker tournament",
     "bigBlind": 5,
-    "smallBlind": 2,
-    "hostId": 2
+    "smallBlind": 2
   },
   {
-    "id": 3,
     "name": "Charity Poker Event",
     "dateStart": "2025-10-05T19:00:00Z",
     "dateEnd": null,
@@ -38,7 +33,6 @@
     "placesPaid": 10,
     "description": "Poker event to raise funds for local charity",
     "bigBlind": 10,
-    "smallBlind": 5,
-    "hostId": 3
+    "smallBlind": 5
   }
 ]

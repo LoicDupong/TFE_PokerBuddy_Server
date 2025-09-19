@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "username": "Alice",
     "email": "alice@mail.com",
     "password": "hashed",
@@ -9,7 +8,6 @@
     "gamePlayed": 12
   },
   {
-    "id": 2,
     "username": "Bob",
     "email": "bob@mail.com",
     "password": "hashed",
@@ -18,7 +16,6 @@
     "gamePlayed": 9
   },
   {
-    "id": 3,
     "username": "Charlie",
     "email": "charlie@mail.com",
     "password": "hashed",
