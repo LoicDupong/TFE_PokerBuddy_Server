@@ -47,28 +47,24 @@ const gameController = {
             const games = await db.Game.findAll({
                 include: [
                     {
-                        model: db.GameResult,
-                        as: "results",
+                        model: db.GamePlayer,
+                        as: "playerLinks",
                         required: false,
-                        where: { userId: req.user.id }, // filtre sur l’utilisateur connecté
+                        where: { userId: req.user.id }, // joueur lié
                     },
                     {
                         model: db.User,
                         as: "host",
                         attributes: ["id", "username", "email"],
-                        where: { id: req.user.id },
-                        required: false,
                     },
                 ],
                 where: {
                     [Op.or]: [
                         { hostId: req.user.id }, // si user est host
-                        { "$results.userId$": req.user.id }, // si user est joueur
+                        { "$playerLinks.userId$": req.user.id }, // si user est participant
                     ],
                 },
             });
-
-            res.json({ games });
 
             const updatedGames = await Promise.all(games.map(game => updateGameStatus(game)));
 
@@ -91,18 +87,21 @@ const gameController = {
                         as: "results",
                         include: [
                             {
-                                model: db.User,
-                                as: "user",
-                                attributes: ["id", "username", "email"], // infos du joueur
-                            },
+                                model: db.GamePlayer,
+                                as: "player",
+                                include: [
+                                    { model: db.User, as: "user", attributes: ["id", "username", "email"] }
+                                ]
+                            }
                         ],
                     },
                     {
                         model: db.User,
                         as: "host",
-                        attributes: ["id", "username", "email"], // infos du host
+                        attributes: ["id", "username", "email"],
                     },
                 ],
+
             });
             if (!game) {
                 return res.status(404).json({ error: "Game not found" });
@@ -120,22 +119,35 @@ const gameController = {
         try {
             const { id } = req.params;
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
             const game = await db.Game.findByPk(id);
             if (!game) {
                 return res.status(404).json({ error: "Game not found" });
             }
-            if (Number(game.hostId) !== Number(req.user.id)) {
+            if (game.status !== 'finished' && game.hostId === req.user.id) {
+                const { name, dateStart, buyIn, prizePool, placesPaid, description, bigBlind, smallBlind } = req.body;
+
+                const fieldsToUpdate = {};
+                if (name) fieldsToUpdate.name = name;
+                if (dateStart) fieldsToUpdate.dateStart = dateStart;
+                if (prizePool) fieldsToUpdate.prizePool = prizePool;
+                if (buyIn) fieldsToUpdate.buyIn = buyIn;
+                if (placesPaid) fieldsToUpdate.placesPaid = placesPaid;
+                if (description) fieldsToUpdate.description = description;
+                if (bigBlind) fieldsToUpdate.bigBlind = bigBlind;
+                if (smallBlind) fieldsToUpdate.smallBlind = smallBlind;
+
+                await game.update(fieldsToUpdate);
+                res.status(200).json({ message: "Game updated", fieldsToUpdate });
+            }
+
+            if (game.status === "finished") {
+                return res.status(400).json({ error: "Cannot update a finished game" });
+            }
+            if (game.hostId !== req.user.id) {
                 return res.status(403).json({ error: "Forbidden" });
             }
-            if (game.status !== 'pending') {
-                return res.status(400).json({ error: "Only pending games can be updated" });
-            }
 
-            const { name, buyIn, placesPaid, description, bigBlind, smallBlind } = req.body;
-
-            await game.update({ name, buyIn, placesPaid, description, bigBlind, smallBlind });
-
-            res.status(200).json({ message: "Game updated", game });
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Error updating game" });
@@ -152,9 +164,10 @@ const gameController = {
             if (!game) {
                 return res.status(404).json({ error: "Game not found" });
             }
-            if (Number(game.hostId) !== Number(req.user.id)) {
+            if (game.hostId !== req.user.id) {
                 return res.status(403).json({ error: "Forbidden" });
             }
+
             await game.destroy();
 
             res.status(200).json({ message: "Game deleted" });

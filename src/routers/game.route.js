@@ -13,7 +13,8 @@ gameRouter
 gameRouter
     .route('/:id')
     .get(authorizeMiddleware(), gameController.getGameById)
-    .put(authorizeMiddleware(), gameController.updateGame)
+    .patch(authorizeMiddleware(), gameController.updateGame)
     .delete(authorizeMiddleware(), gameController.deleteGame);
+
 
 export default gameRouter;

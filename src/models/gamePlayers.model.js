@@ -4,48 +4,46 @@ import { DataTypes, Sequelize } from "sequelize";
  * 
  * @param {Sequelize} sequelize 
  */
-export default function gameResultModel(sequelize) {
-    const GameResult = sequelize.define('GameResult', {
+export default function gamePlayersModel(sequelize) {
+    const GamePlayer = sequelize.define('GamePlayer', {
         id: {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        rank: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-        },
-        prize: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-        },
         gameId: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'games', // ✅ correction ici
+                model: 'games',
                 key: 'id',
             },
             onDelete: 'CASCADE',
+        },
+        userId: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            references: {
+                model: 'users',
+                key: 'id',
+            },
+            onDelete: 'SET NULL',
             onUpdate: 'CASCADE',
         },
-        gamePlayerId: {
-            type: DataTypes.UUID,
-            allowNull: false,
-            references: {
-                model: 'game_players',
-                key: 'id',
-            },
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE',
+        guestName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        isConfirmed: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
     }, {
-        tableName: 'game_results',
+        tableName: 'game_players',
         timestamps: true,
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',
     });
 
-    return GameResult;
+    return GamePlayer;
 }

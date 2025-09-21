@@ -15,7 +15,7 @@ export default function gameModel(sequelize) {
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: false
         },
         dateStart: {
             type: DataTypes.DATE,
@@ -72,7 +72,7 @@ export default function gameModel(sequelize) {
         timestamps: true,
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',
-        tableName: 'game'
+        tableName: 'games'
     });
 
     return Game;
