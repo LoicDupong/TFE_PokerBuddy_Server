@@ -61,7 +61,7 @@ const authController = {
         // Génération du token
         const loginToken = await generateToken(user);
 
-        res.status(200).json({ user, loginToken: loginToken });
+        res.status(200).json({ user, token: loginToken });
     },
 
     me: async (req, res) => {
