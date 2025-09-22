@@ -76,3 +76,6 @@ db.GameResult.belongsTo(db.GamePlayer, { foreignKey: "gamePlayerId", as: "player
 // ───────────────────────────────
 db.Game.hasMany(db.GameResult, { foreignKey: "gameId", as: "results" });
 db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
+
+// Accès direct au user via gameResult 
+db.GameResult.belongsTo(db.User, { foreignKey: 'userId', as: 'user', through: db.GamePlayer });

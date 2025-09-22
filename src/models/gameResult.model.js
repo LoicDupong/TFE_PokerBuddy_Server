@@ -24,7 +24,7 @@ export default function gameResultModel(sequelize) {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'games', // ✅ correction ici
+                model: 'games', 
                 key: 'id',
             },
             onDelete: 'CASCADE',
