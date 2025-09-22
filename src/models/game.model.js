@@ -26,6 +26,10 @@ export default function gameModel(sequelize) {
             allowNull: true,
             defaultValue: null,
         },
+        location: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
         buyIn: {
             type: DataTypes.INTEGER,
             allowNull: false,

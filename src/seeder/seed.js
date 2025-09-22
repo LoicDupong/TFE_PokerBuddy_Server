@@ -9,7 +9,7 @@ try {
     console.log('Connection has been established successfully.');
 
     // Synchronisation des modèles avec la base de données
-    await db.sequelize.sync({ alter: true });
+    await db.sequelize.sync({ force: true });
     console.log("✅ All models were synchronized successfully.");
 
     // await seederInsert();

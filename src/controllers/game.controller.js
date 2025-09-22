@@ -9,6 +9,7 @@ const gameController = {
             const {
                 name,
                 dateStart,
+                location,
                 buyIn,
                 prizePool,
                 placesPaid,
@@ -16,13 +17,13 @@ const gameController = {
                 bigBlind,
                 smallBlind,
             } = req.body;
-            console.log(req.user.id);
 
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
             const newGame = await db.Game.create({
                 name,
                 dateStart,
+                location,
                 buyIn,
                 prizePool,
                 placesPaid,
@@ -31,8 +32,6 @@ const gameController = {
                 smallBlind,
                 hostId: req.user.id,
             });
-
-            console.log(newGame);
 
             res.status(201).json({ game: newGame });
         } catch (error) {
@@ -125,11 +124,12 @@ const gameController = {
                 return res.status(404).json({ error: "Game not found" });
             }
             if (game.status !== 'finished' && game.hostId === req.user.id) {
-                const { name, dateStart, buyIn, prizePool, placesPaid, description, bigBlind, smallBlind } = req.body;
+                const { name, dateStart,location, buyIn, prizePool, placesPaid, description, bigBlind, smallBlind } = req.body;
 
                 const fieldsToUpdate = {};
                 if (name) fieldsToUpdate.name = name;
                 if (dateStart) fieldsToUpdate.dateStart = dateStart;
+                if (location) fieldsToUpdate.location = location;
                 if (prizePool) fieldsToUpdate.prizePool = prizePool;
                 if (buyIn) fieldsToUpdate.buyIn = buyIn;
                 if (placesPaid) fieldsToUpdate.placesPaid = placesPaid;
