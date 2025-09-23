@@ -1,0 +1,8 @@
+[
+  { "user": "AceHigh", "friend": "RiverQueen", "status": "accepted" },
+  { "user": "AceHigh", "friend": "ChipMonster", "status": "accepted" },
+  { "user": "TiltKing", "friend": "LuckyLuke", "status": "pending" },
+  { "user": "CalmCall", "friend": "BluffMaster", "status": "accepted" },
+  { "user": "AllInAndy", "friend": "GrinderJoe", "status": "accepted" },
+  { "user": "SilentSam", "friend": "AceHigh", "status": "declined" }
+]

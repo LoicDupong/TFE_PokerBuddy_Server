@@ -1,26 +1,72 @@
 [
   {
-    "username": "Alice",
-    "email": "alice@mail.com",
-    "password": "hashed",
-    "avatar": "https://example.com/avatars/alice.png",
-    "description": "Casual player, loves friendly games",
-    "gamePlayed": 12
+    "username": "AceHigh",
+    "email": "ace@example.com",
+    "password": "hashedpwd1",
+    "avatar": null,
+    "description": "Aggressive player"
   },
   {
-    "username": "Bob",
-    "email": "bob@mail.com",
-    "password": "hashed",
-    "avatar": "https://example.com/avatars/bob.png",
-    "description": "Competitive player",
-    "gamePlayed": 9
+    "username": "RiverQueen",
+    "email": "queen@example.com",
+    "password": "hashedpwd2",
+    "avatar": null,
+    "description": "Loves big bluffs"
   },
   {
-    "username": "Charlie",
-    "email": "charlie@mail.com",
-    "password": "hashed",
-    "avatar": "https://example.com/avatars/charlie.png",
-    "description": "Beginner learning the ropes",
-    "gamePlayed": 5
+    "username": "ChipMonster",
+    "email": "monster@example.com",
+    "password": "hashedpwd3",
+    "avatar": null,
+    "description": "Stack collector"
+  },
+  {
+    "username": "TiltKing",
+    "email": "tilt@example.com",
+    "password": "hashedpwd4",
+    "avatar": null,
+    "description": "Always on tilt"
+  },
+  {
+    "username": "LuckyLuke",
+    "email": "luke@example.com",
+    "password": "hashedpwd5",
+    "avatar": null,
+    "description": "All about luck"
+  },
+  {
+    "username": "CalmCall",
+    "email": "calm@example.com",
+    "password": "hashedpwd6",
+    "avatar": null,
+    "description": "Solid player"
+  },
+  {
+    "username": "BluffMaster",
+    "email": "bluff@example.com",
+    "password": "hashedpwd7",
+    "avatar": null,
+    "description": "Expert at bluffing"
+  },
+  {
+    "username": "AllInAndy",
+    "email": "andy@example.com",
+    "password": "hashedpwd8",
+    "avatar": null,
+    "description": "Goes all-in often"
+  },
+  {
+    "username": "GrinderJoe",
+    "email": "joe@example.com",
+    "password": "hashedpwd9",
+    "avatar": null,
+    "description": "Grinds every session"
+  },
+  {
+    "username": "SilentSam",
+    "email": "sam@example.com",
+    "password": "hashedpwd10",
+    "avatar": null,
+    "description": "Quiet but deadly"
   }
 ]

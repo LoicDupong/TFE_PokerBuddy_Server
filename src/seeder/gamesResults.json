@@ -1,3 +1,32 @@
 [
-
+    {
+        "game": "Friday Night Poker",
+        "user": "AceHigh",
+        "rank": 1,
+        "prize": 70
+    },
+    {
+        "game": "Friday Night Poker",
+        "user": "RiverQueen",
+        "rank": 2,
+        "prize": 30
+    },
+    {
+        "game": "Sunday Deepstack",
+        "user": "ChipMonster",
+        "rank": 1,
+        "prize": 100
+    },
+    {
+        "game": "Sunday Deepstack",
+        "user": "BluffMaster",
+        "rank": 2,
+        "prize": 60
+    },
+    {
+        "game": "Sunday Deepstack",
+        "user": "CalmCall",
+        "rank": 3,
+        "prize": 40
+    }
 ]

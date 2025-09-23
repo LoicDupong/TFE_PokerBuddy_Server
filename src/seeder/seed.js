@@ -2,6 +2,8 @@ import db from "../models/index.js";
 import usersJSON from './users.json' with { type: 'json' };
 import gamesJSON from './games.json' with { type: 'json' };
 import gamesResultsJSON from './gamesResults.json' with { type: 'json' };
+import friendsJSON from './friends.json' with { type: 'json' };
+import argon2 from "argon2";
 
 try {
     // Test de la connexion
@@ -12,88 +14,121 @@ try {
     await db.sequelize.sync({ force: true });
     console.log("✅ All models were synchronized successfully.");
 
-    // await seederInsert();
+    await seederInsert();
 
-}
-catch (error) {
+} catch (error) {
     console.error('Unable to connect to the database:', error);
 }
 
 async function seederInsert() {
-    // --- Users ---
-    const rowsUsers = usersJSON.map(u => ({
-        email: u.email,
-        password: u.password,
-        username: u.username,
-        avatar: u.avatar ?? null,
-        description: u.description ?? null,
-    }));
+    const t = await db.sequelize.transaction();
 
-    await db.User.bulkCreate(rowsUsers, {
-        updateOnDuplicate: ['email', 'password', 'username', 'avatar', 'description']
-    });
+    try {
+        // --- Users ---
+        const rowsUsers = await Promise.all(usersJSON.map(async u => ({
+            email: u.email,
+            password: await argon2.hash(u.password), // ✅ hash
+            username: u.username,
+            avatar: u.avatar ?? null,
+            description: u.description ?? null,
+        })));
 
-    // Liaison Game / User (host et winner)
-    for (const g of gamesJSON) {
-        const gameInstance = await db.Game.findByPk(g.id);
-        if (!gameInstance) continue;
+        const createdUsers = await db.User.bulkCreate(rowsUsers, {
+            updateOnDuplicate: ["email", "password", "username", "avatar", "description"],
+            transaction: t,
+            returning: true,
+        });
 
-        const hostInstance = await db.User.findOne(
-            { where: { username: g.host } }
-        );
+        // Map username → id
+        const userMap = {};
+        createdUsers.forEach(u => {
+            userMap[u.username] = u.id;
+        });
 
-        // Set host
-        if (hostInstance) {
-            await gameInstance.setHost(hostInstance);
+        // --- Friends ---
+        for (const f of friendsJSON) {
+            const userId = userMap[f.user];
+            const friendId = userMap[f.friend];
+
+            if (userId && friendId) {
+                await db.Friend.findOrCreate({
+                    where: { userId, friendId },
+                    defaults: { status: f.status },
+                    transaction: t,
+                });
+            }
         }
+
+        // --- Games ---
+        const rowsGames = gamesJSON.map(g => ({
+            name: g.name,
+            dateStart: g.dateStart,
+            dateEnd: g.dateEnd,
+            location: g.location,
+            buyIn: g.buyIn,
+            prizePool: g.prizePool,
+            status: g.status,
+            placesPaid: g.placesPaid,
+            description: g.description,
+            bigBlind: g.bigBlind,
+            smallBlind: g.smallBlind,
+            hostId: userMap[g.host],
+        }));
+
+        const createdGames = await db.Game.bulkCreate(rowsGames, {
+            updateOnDuplicate: [
+                "name", "dateStart", "dateEnd", "location",
+                "buyIn", "prizePool", "status", "placesPaid",
+                "description", "bigBlind", "smallBlind", "hostId"
+            ],
+            transaction: t,
+            returning: true,
+        });
+
+        // Map gameName → id
+        const gameMap = {};
+        createdGames.forEach(g => {
+            gameMap[g.name] = g.id;
+        });
+
+        // --- GamePlayers ---
+        const gamePlayerMap = {};
+
+        for (const gr of gamesResultsJSON) {
+            const gameId = gameMap[gr.game];
+            const userId = userMap[gr.user];
+
+            if (gameId && userId) {
+                if (!gamePlayerMap[`${gr.game}_${gr.user}`]) {
+                    const gp = await db.GamePlayer.create({
+                        gameId,
+                        userId,
+                        userName: gr.user,
+                        isConfirmed: true,
+                    }, { transaction: t });
+
+                    gamePlayerMap[`${gr.game}_${gr.user}`] = gp.id;
+                }
+            }
+        }
+
+        // --- Game Results ---
+        const rowsResults = gamesResultsJSON.map(gr => ({
+            rank: gr.rank,
+            prize: gr.prize,
+            gameId: gameMap[gr.game],
+            gamePlayerId: gamePlayerMap[`${gr.game}_${gr.user}`],
+        }));
+
+        await db.GameResult.bulkCreate(rowsResults, {
+            updateOnDuplicate: ["rank", "prize", "gameId", "gamePlayerId"],
+            transaction: t,
+        });
+
+        await t.commit();
+        console.log("✅ Seed data inserted successfully.");
+    } catch (error) {
+        await t.rollback();
+        console.error("❌ Seed failed:", error);
     }
-
-    // --- Games ---
-    const rowsGames = gamesJSON.map(g => ({
-        name: g.name,
-        dateStart: g.dateStart,
-        dateEnd: g.dateEnd,
-        buyIn: g.buyIn,
-        prizePool: g.prizePool,
-        status: g.status,
-        placesPaid: g.placesPaid,
-        description: g.description,
-        bigBlind: g.bigBlind,
-        smallBlind: g.smallBlind,
-        hostId: g.hostId,
-    }));
-
-    await db.Game.bulkCreate(rowsGames, {
-        updateOnDuplicate: ['name', 'dateStart', 'dateEnd', 'buyIn', 'prizePool', 'status', 'placesPaid', 'description', 'bigBlind', 'smallBlind', 'hostId']
-    });
-
-    // Liaison GameResult / User + Game
-    for (const gr of gamesResultsJSON) {
-        const gameInstance = await db.Game.findByPk(gr.gameId);
-        if (!gameInstance) continue;
-
-        const userInstance = await db.User.findByPk(gr.userId);
-        if (!userInstance) continue;
-
-        const gameResultInstance = await db.GameResult.findOne(
-            { where: { gameId: gr.gameId, userId: gr.userId } }
-        );
-
-    }
-
-
-    // --- GamesResults ---
-    const rowsResults = gamesResultsJSON.map((gr) => ({
-        rank: gr.rank,
-        prize: gr.prize,
-        gameId: gr.gameId,
-        userId: gr.userId,
-    }));
-
-    await db.GameResult.bulkCreate(rowsResults, {
-        updateOnDuplicate: ["rank", "prize", "gameId", "userId"],
-    });
-
-
-    console.log("✅ Seed data inserted successfully.");
 }
