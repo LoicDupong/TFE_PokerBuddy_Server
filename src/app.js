@@ -17,6 +17,8 @@ app.use(express.json());
 
 // Static files (images, etc.)
 app.use('/public', express.static('public'));
+app.use("/uploads", express.static("uploads"));
+
 
 // Routing
 app.use('/api', authMiddleware(), apiRouter);
