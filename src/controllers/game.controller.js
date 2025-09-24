@@ -59,43 +59,13 @@ const gameController = {
 
             const games = await db.Game.findAll({
                 include: [
-                    {
-                        model: db.GamePlayer,
-                        as: "playerLinks",
-                        required: false,
-                        where: { userId: req.user.id }, // joueur lié
-                    },
+                    // 👑 Host
                     {
                         model: db.User,
                         as: "host",
                         attributes: ["id", "username", "email"],
                     },
-                ],
-                where: {
-                    [Op.or]: [
-                        { hostId: req.user.id }, // si user est host
-                        { "$playerLinks.userId$": req.user.id }, // si user est participant
-                    ],
-                },
-            });
-
-            const updatedGames = await Promise.all(games.map(game => updateGameStatus(game)));
-
-            res.status(200).json({ games: updatedGames });
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: "Error fetching games" });
-        }
-    },
-    getGameById: async (req, res) => {
-        try {
-            const { id } = req.params;
-            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
-            const game = await db.Game.findByPk(id, {
-                include: [
-                    // Participants
+                    // 🎮 Joueurs
                     {
                         model: db.GamePlayer,
                         as: "playerLinks",
@@ -107,7 +77,7 @@ const gameController = {
                             },
                         ],
                     },
-                    // Résultats (avec lien GamePlayer)
+                    // 🏆 Résultats
                     {
                         model: db.GameResult,
                         as: "results",
@@ -116,16 +86,78 @@ const gameController = {
                                 model: db.GamePlayer,
                                 as: "player",
                                 include: [
-                                    { model: db.User, as: "user", attributes: ["id", "username", "email"] },
+                                    {
+                                        model: db.User,
+                                        as: "user",
+                                        attributes: ["id", "username", "email"],
+                                    },
                                 ],
                             },
                         ],
                     },
-                    // Host
+                ],
+                where: {
+                    [Op.or]: [
+                        { hostId: req.user.id },                // si user est host
+                        { "$playerLinks.userId$": req.user.id } // si user est joueur
+                    ],
+                },
+                order: [["dateStart", "DESC"]],
+            });
+
+            const updatedGames = await Promise.all(
+                games.map((g) => updateGameStatus(g))
+            );
+
+            res.status(200).json({ games: updatedGames });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Error fetching games" });
+        }
+    },
+
+    getGameById: async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+            const game = await db.Game.findByPk(id, {
+                include: [
+                    // 👑 Host
                     {
                         model: db.User,
                         as: "host",
                         attributes: ["id", "username", "email"],
+                    },
+                    // 🎮 Joueurs (GamePlayers + User/Guest)
+                    {
+                        model: db.GamePlayer,
+                        as: "playerLinks",
+                        include: [
+                            {
+                                model: db.User,
+                                as: "user",
+                                attributes: ["id", "username", "email"],
+                            },
+                        ],
+                    },
+                    // 🏆 Résultats (GameResult -> GamePlayer -> User)
+                    {
+                        model: db.GameResult,
+                        as: "results",
+                        include: [
+                            {
+                                model: db.GamePlayer,
+                                as: "player",
+                                include: [
+                                    {
+                                        model: db.User,
+                                        as: "user",
+                                        attributes: ["id", "username", "email"],
+                                    },
+                                ],
+                            },
+                        ],
                     },
                 ],
             });
@@ -136,44 +168,15 @@ const gameController = {
 
             const updatedGame = await updateGameStatus(game);
 
-            // 🔹 Fallback si payoutDistribution absent
-            let payoutDistribution = updatedGame.payoutDistribution;
-            if (!payoutDistribution || payoutDistribution.length === 0) {
-                if (updatedGame.placesPaid === 1) {
-                    payoutDistribution = [{ place: 1, percent: 100 }];
-                } else if (updatedGame.placesPaid === 2) {
-                    payoutDistribution = [
-                        { place: 1, percent: 70 },
-                        { place: 2, percent: 30 }
-                    ];
-                } else if (updatedGame.placesPaid === 3) {
-                    payoutDistribution = [
-                        { place: 1, percent: 50 },
-                        { place: 2, percent: 30 },
-                        { place: 3, percent: 20 }
-                    ];
-                }
-            }
-
-            // 🔹 Calcul des montants
-            const payouts = payoutDistribution.map(p => ({
-                place: p.place,
-                percent: p.percent,
-                amount: Math.round((updatedGame.prizePool - updatedGame.buyIn) * (p.percent / 100))
-            }));
-
             res.status(200).json({
-                game: {
-                    ...updatedGame.toJSON(),
-                    payouts
-                }
+                game: updatedGame,
             });
-
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Error fetching game" });
+            res.status(500).json({ error: "Error fetching game details" });
         }
     },
+
 
     updateGame: async (req, res) => {
         try {

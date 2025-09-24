@@ -16,6 +16,7 @@ const userController = {
   getUser: async (req, res) => {
     try {
       const { id } = req.params;
+      console.log(id);
 
       const user = await db.User.findByPk(id, {
         attributes: ["id", "username", "avatar", "description", "createdAt"],
@@ -25,27 +26,52 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Stats calculées
-      const gamesPlayed = await db.GameResult.count({ where: { userId: id } });
-      const gamesWon = await db.GameResult.count({
-        where: { userId: id, rank: 1 },
-      });
-      const totalWinnings = await db.GameResult.sum("prize", {
-        where: { userId: id },
+      // Total games played
+      const totalGames = await db.GamePlayer.count({
+        where: { userId: user.id },
+        include: [{
+          model: db.Game,
+          as: "game",
+          where: { status: "finished" }
+        }]
       });
 
-      const stats = {
-        gamesPlayed,
-        gamesWon,
-        winRate: gamesPlayed > 0 ? (gamesWon / gamesPlayed) * 100 : 0,
-        totalWinnings: totalWinnings || 0,
-      };
+      // Total games won (position = 1)
+      const totalGamesWon = await db.GameResult.count({
+        include: [
+          {
+            model: db.GamePlayer,
+            as: "player",
+            where: { userId: user.id }
+          },
+          {
+            model: db.Game,
+            as: "game",
+            where: { status: "finished" }
+          }
+        ],
+        where: { rank: 1 }
+      });
+
+      // Win rate %
+      const winRate = totalGames > 0 ? ((totalGamesWon / totalGames) * 100).toFixed(1) : 0;
+
+      // Games hosted
+      const gamesHosted = await db.Game.count({
+        where: { hostId: user.id }
+      });
 
       res.status(200).json({
         user: {
           ...user.toJSON(),
-          stats,
-        },
+          stats: {
+            totalGames,
+            totalGamesWon,
+            winRate,
+            gamesHosted
+          },
+          friends: user.Friends,
+        }
       });
     } catch (error) {
       console.error("Get user error:", error);
@@ -76,21 +102,33 @@ const userController = {
 
       // Total games played
       const totalGames = await db.GamePlayer.count({
-        where: { userId: user.id }
+        where: { userId: user.id },
+        include: [{
+          model: db.Game,
+          as: "game",
+          where: { status: "finished" }
+        }]
       });
 
       // Total games won (position = 1)
       const totalGamesWon = await db.GameResult.count({
-        include: [{
-          model: db.GamePlayer,
-          as: "player",
-          where: { userId: user.id }
-        }],
+        include: [
+          {
+            model: db.GamePlayer,
+            as: "player",
+            where: { userId: user.id }
+          },
+          {
+            model: db.Game,
+            as: "game",
+            where: { status: "finished" }
+          }
+        ],
         where: { rank: 1 }
       });
 
       // Win rate %
-      const winRate = totalGames > 0 ? (totalGamesWon / totalGames) * 100 : 0;
+      const winRate = totalGames > 0 ? ((totalGamesWon / totalGames) * 100).toFixed(1) : 0;
 
       // Games hosted
       const gamesHosted = await db.Game.count({

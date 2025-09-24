@@ -1,32 +1,29 @@
 [
-    {
-        "game": "Friday Night Poker",
-        "user": "AceHigh",
-        "rank": 1,
-        "prize": 70
-    },
-    {
-        "game": "Friday Night Poker",
-        "user": "RiverQueen",
-        "rank": 2,
-        "prize": 30
-    },
-    {
-        "game": "Sunday Deepstack",
-        "user": "ChipMonster",
-        "rank": 1,
-        "prize": 100
-    },
-    {
-        "game": "Sunday Deepstack",
-        "user": "BluffMaster",
-        "rank": 2,
-        "prize": 60
-    },
-    {
-        "game": "Sunday Deepstack",
-        "user": "CalmCall",
-        "rank": 3,
-        "prize": 40
-    }
+  { "game": "Friday Night Poker", "user": "AceHigh", "rank": 1, "prize": 70 },
+  { "game": "Friday Night Poker", "user": "RiverQueen", "rank": 2, "prize": 30 },
+  { "game": "Friday Night Poker", "user": "ChipMonster", "rank": 3, "prize": 0 },
+  { "game": "Friday Night Poker", "user": "SilentSam", "rank": 4, "prize": 0 },
+
+  { "game": "Sunday Deepstack", "user": "ChipMonster", "rank": 1, "prize": 100 },
+  { "game": "Sunday Deepstack", "user": "BluffMaster", "rank": 2, "prize": 60 },
+  { "game": "Sunday Deepstack", "user": "CalmCall", "rank": 3, "prize": 40 },
+  { "game": "Sunday Deepstack", "user": "AllInAndy", "rank": 4, "prize": 0 },
+  { "game": "Sunday Deepstack", "user": "GrinderJoe", "rank": 5, "prize": 0 },
+  { "game": "Sunday Deepstack", "user": "LuckyLuke", "rank": 6, "prize": 0 },
+
+  { "game": "Midweek Madness", "user": "AceHigh", "rank": 1, "prize": 0 },
+  { "game": "Midweek Madness", "user": "RiverQueen", "rank": 2, "prize": 0 },
+  { "game": "Midweek Madness", "user": "ChipMonster", "rank": 3, "prize": 0 },
+  { "game": "Midweek Madness", "user": "TiltKing", "rank": 4, "prize": 0 },
+
+  { "game": "Turbo Tuesday", "user": "LuckyLuke", "rank": 1, "prize": 0 },
+  { "game": "Turbo Tuesday", "user": "CalmCall", "rank": 2, "prize": 0 },
+
+  { "game": "High Roller Night", "user": "AceHigh", "rank": 1, "prize": 0 },
+  { "game": "High Roller Night", "user": "LuckyLuke", "rank": 2, "prize": 0 },
+  { "game": "High Roller Night", "user": "RiverQueen", "rank": 3, "prize": 0 },
+
+  { "game": "Casual Friday", "user": "SilentSam", "rank": 1, "prize": 0 },
+  { "game": "Casual Friday", "user": "BluffMaster", "rank": 2, "prize": 0 },
+  { "game": "Casual Friday", "user": "AllInAndy", "rank": 3, "prize": 0 }
 ]

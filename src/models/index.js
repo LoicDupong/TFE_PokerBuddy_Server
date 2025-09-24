@@ -6,20 +6,15 @@ import gameResultModel from "./gameResult.model.js";
 import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
 
-// Récuperation des variables d'env
+// Récupération des variables d'env
 const { DB_DATABASE, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT } = process.env;
 
-console.log(DB_DATABASE, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT);
-
-
-// Initialisation de l'objet "sequelize"
 const sequelize = new Sequelize(DB_DATABASE, DB_USER, DB_PASSWORD, {
-    host: DB_SERVER,
-    port: DB_PORT,
-    dialect: 'postgres'
+  host: DB_SERVER,
+  port: DB_PORT,
+  dialect: 'postgres'
 });
 
-// Objet DB
 const db = {};
 export default db;
 
@@ -31,8 +26,6 @@ db.Game = gameModel(sequelize);
 db.GameResult = gameResultModel(sequelize);
 db.Friend = friendModel(sequelize);
 db.GamePlayer = gamePlayersModel(sequelize);
-
-//* Associations
 
 // ───────────────────────────────
 // USER <-> GAME (Host)
@@ -77,5 +70,5 @@ db.GameResult.belongsTo(db.GamePlayer, { foreignKey: "gamePlayerId", as: "player
 db.Game.hasMany(db.GameResult, { foreignKey: "gameId", as: "results" });
 db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
 
-// Accès direct au user via gameResult 
-db.GameResult.belongsTo(db.User, { foreignKey: 'userId', as: 'user', through: db.GamePlayer });
+// L’accès au user se fait via: GameResult → GamePlayer → User
+

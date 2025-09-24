@@ -6,11 +6,9 @@ import friendsJSON from './friends.json' with { type: 'json' };
 import argon2 from "argon2";
 
 try {
-    // Test de la connexion
     await db.sequelize.authenticate();
     console.log('Connection has been established successfully.');
 
-    // Synchronisation des modèles avec la base de données
     await db.sequelize.sync({ force: true });
     console.log("✅ All models were synchronized successfully.");
 
@@ -27,7 +25,7 @@ async function seederInsert() {
         // --- Users ---
         const rowsUsers = await Promise.all(usersJSON.map(async u => ({
             email: u.email,
-            password: await argon2.hash(u.password), // ✅ hash
+            password: await argon2.hash(u.password),
             username: u.username,
             avatar: u.avatar ?? null,
             description: u.description ?? null,
@@ -39,7 +37,6 @@ async function seederInsert() {
             returning: true,
         });
 
-        // Map username → id
         const userMap = {};
         createdUsers.forEach(u => {
             userMap[u.username] = u.id;
@@ -49,7 +46,6 @@ async function seederInsert() {
         for (const f of friendsJSON) {
             const userId = userMap[f.user];
             const friendId = userMap[f.friend];
-
             if (userId && friendId) {
                 await db.Friend.findOrCreate({
                     where: { userId, friendId },
@@ -85,13 +81,12 @@ async function seederInsert() {
             returning: true,
         });
 
-        // Map gameName → id
         const gameMap = {};
         createdGames.forEach(g => {
             gameMap[g.name] = g.id;
         });
 
-        // --- GamePlayers ---
+        // --- GamePlayers + Results ---
         const gamePlayerMap = {};
 
         for (const gr of gamesResultsJSON) {
@@ -99,6 +94,7 @@ async function seederInsert() {
             const userId = userMap[gr.user];
 
             if (gameId && userId) {
+                // Si ce joueur n'existe pas déjà dans GamePlayer → on l'insère
                 if (!gamePlayerMap[`${gr.game}_${gr.user}`]) {
                     const gp = await db.GamePlayer.create({
                         gameId,
@@ -109,21 +105,16 @@ async function seederInsert() {
 
                     gamePlayerMap[`${gr.game}_${gr.user}`] = gp.id;
                 }
+
+                // Ensuite, on crée le GameResult pour ce joueur
+                await db.GameResult.create({
+                    rank: gr.rank,
+                    prize: gr.prize,
+                    gameId,
+                    gamePlayerId: gamePlayerMap[`${gr.game}_${gr.user}`],
+                }, { transaction: t });
             }
         }
-
-        // --- Game Results ---
-        const rowsResults = gamesResultsJSON.map(gr => ({
-            rank: gr.rank,
-            prize: gr.prize,
-            gameId: gameMap[gr.game],
-            gamePlayerId: gamePlayerMap[`${gr.game}_${gr.user}`],
-        }));
-
-        await db.GameResult.bulkCreate(rowsResults, {
-            updateOnDuplicate: ["rank", "prize", "gameId", "gamePlayerId"],
-            transaction: t,
-        });
 
         await t.commit();
         console.log("✅ Seed data inserted successfully.");
