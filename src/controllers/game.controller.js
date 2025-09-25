@@ -5,10 +5,14 @@ import { updateGameStatus } from "../utils/gameStatus.utils.js";
 
 const gameController = {
     createGame: async (req, res) => {
+        const t = await db.sequelize.transaction();
         try {
-            const {
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+            let {
                 name,
                 dateStart,
+                realStart,
                 location,
                 buyIn,
                 prizePool,
@@ -16,14 +20,30 @@ const gameController = {
                 description,
                 bigBlind,
                 smallBlind,
+                levelDuration,
+                enableBlindTimer,
+                allowRebuys,
+                maxPlayers,
+                currency,
                 payoutDistribution,
+                invites,
             } = req.body;
 
-            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+            // Debug brut de ce que ton front envoie
+            console.log("📥 Raw req.body:", req.body);
 
-            // 🔹 Validation distribution
+            // ✅ PayoutDistribution
+            let parsedPayout = null;
             if (payoutDistribution) {
-                const total = payoutDistribution.reduce((sum, p) => sum + p.percent, 0);
+                parsedPayout =
+                    typeof payoutDistribution === "string"
+                        ? JSON.parse(payoutDistribution)
+                        : payoutDistribution;
+
+                const total = parsedPayout.reduce(
+                    (sum, p) => sum + Number(p.percent),
+                    0
+                );
                 if (total !== 100) {
                     return res
                         .status(400)
@@ -31,26 +51,102 @@ const gameController = {
                 }
             }
 
-            const newGame = await db.Game.create({
+            // ✅ Combine dateStart + realStart
+            let realStartDate = null;
+            if (realStart && dateStart) {
+                const combinedDate = new Date(dateStart);
+                const [hours, minutes] = realStart.split(":");
+                combinedDate.setHours(hours, minutes, 0, 0);
+                realStartDate = combinedDate.toISOString();
+            }
+
+            const payload = {
                 name,
                 dateStart,
+                realStart: realStartDate,
                 location,
-                buyIn,
-                prizePool,
-                placesPaid,
+                buyIn: Number(buyIn),
+                prizePool: Number(prizePool),
+                placesPaid: Number(placesPaid),
                 description,
-                bigBlind,
-                smallBlind,
-                payoutDistribution: payoutDistribution || null,
+                bigBlind: Number(bigBlind),
+                smallBlind: Number(smallBlind),
+                levelDuration: Number(levelDuration) || 15,
+                enableBlindTimer: enableBlindTimer === "on",
+                allowRebuys: allowRebuys === "on",
+                maxPlayers: maxPlayers ? Number(maxPlayers) : null,
+                currency: currency || "EUR",
+                payoutDistribution: parsedPayout,
                 hostId: req.user.id,
-            });
+            };
+
+            // Log clair de ce que tu vas insérer
+            console.log("📦 Payload envoyé à Sequelize:", payload);
+
+            // ✅ Création du Game
+            const newGame = await db.Game.create(payload, { transaction: t });
+
+            // ✅ Gestion des invites
+            if (invites) {
+                const parsedInvites =
+                    typeof invites === "string" ? JSON.parse(invites) : invites;
+
+                const gamePlayers = [];
+
+                if (parsedInvites.friends?.length) {
+                    for (const f of parsedInvites.friends) {
+                        gamePlayers.push({
+                            gameId: newGame.id,
+                            userId: f.id,
+                            userName: f.name,
+                            isConfirmed: false,
+                        });
+                    }
+                }
+
+                if (parsedInvites.guests?.length) {
+                    for (const g of parsedInvites.guests) {
+                        gamePlayers.push({
+                            gameId: newGame.id,
+                            guestName: g,
+                            isConfirmed: false,
+                        });
+                    }
+                }
+
+                if (parsedInvites.emails?.length) {
+                    for (const e of parsedInvites.emails) {
+                        gamePlayers.push({
+                            gameId: newGame.id,
+                            guestName: e,
+                            isConfirmed: false,
+                        });
+                    }
+                }
+
+                if (gamePlayers.length) {
+                    console.log("👥 Insertion GamePlayers:", gamePlayers);
+                    await db.GamePlayer.bulkCreate(gamePlayers, { transaction: t });
+                }
+            }
+
+            await t.commit();
+            console.log("✅ Game created with invites");
 
             res.status(201).json({ game: newGame });
         } catch (error) {
-            console.error("CreateGame error:", error);
-            res.status(500).json({ error: "Error creating game" });
+            await t.rollback();
+            console.error("❌ CreateGame error");
+            console.error("Message:", error.message);
+            console.error("Stack:", error.stack);
+            if (error.errors) {
+                console.error("Sequelize Errors:", error.errors.map(e => e.message));
+            }
+            res.status(500).json({ error: error.message || "Error creating game" });
         }
+
     },
+
 
 
     getAllGames: async (req, res) => {
@@ -185,51 +281,73 @@ const gameController = {
 
             const game = await db.Game.findByPk(id);
 
-            if (!game) {
-                return res.status(404).json({ error: "Game not found" });
-            }
-            if (game.status === "finished") {
-                return res.status(400).json({ error: "Cannot update a finished game" });
-            }
-            if (game.hostId !== req.user.id) {
-                return res.status(403).json({ error: "Forbidden" });
+            if (!game) return res.status(404).json({ error: "Game not found" });
+            if (game.status === "finished") return res.status(400).json({ error: "Cannot update a finished game" });
+            if (game.hostId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+
+            const {
+                name,
+                dateStart,
+                realStart,
+                location,
+                buyIn,
+                prizePool,
+                placesPaid,
+                description,
+                bigBlind,
+                smallBlind,
+                levelDuration,
+                enableBlindTimer,
+                allowRebuys,
+                payoutDistribution
+            } = req.body;
+
+            const fieldsToUpdate = {};
+
+            if (name !== undefined) fieldsToUpdate.name = name;
+            if (dateStart !== undefined) fieldsToUpdate.dateStart = dateStart;
+            if (location !== undefined) fieldsToUpdate.location = location;
+            if (prizePool !== undefined) fieldsToUpdate.prizePool = prizePool;
+            if (buyIn !== undefined) fieldsToUpdate.buyIn = buyIn;
+            if (placesPaid !== undefined) fieldsToUpdate.placesPaid = placesPaid;
+            if (description !== undefined) fieldsToUpdate.description = description;
+            if (bigBlind !== undefined) fieldsToUpdate.bigBlind = bigBlind;
+            if (smallBlind !== undefined) fieldsToUpdate.smallBlind = smallBlind;
+            if (levelDuration !== undefined) fieldsToUpdate.levelDuration = levelDuration;
+            if (enableBlindTimer !== undefined) fieldsToUpdate.enableBlindTimer = enableBlindTimer;
+            if (allowRebuys !== undefined) fieldsToUpdate.allowRebuys = allowRebuys;
+
+            // 🔹 Handle realStart (HH:mm → full datetime)
+            if (realStart && dateStart) {
+                const combinedDate = new Date(dateStart);
+                const [hours, minutes] = realStart.split(":");
+                combinedDate.setHours(hours, minutes, 0, 0);
+                fieldsToUpdate.realStart = combinedDate.toISOString();
             }
 
-            if (game.status !== 'finished' && game.hostId === req.user.id) {
-                const { name, dateStart, location, buyIn, prizePool, placesPaid, description, bigBlind, smallBlind, payoutDistribution } = req.body;
+            // 🔹 Handle payoutDistribution
+            if (payoutDistribution) {
+                const parsedPayout = typeof payoutDistribution === "string"
+                    ? JSON.parse(payoutDistribution)
+                    : payoutDistribution;
 
-                const fieldsToUpdate = {};
-                if (name) fieldsToUpdate.name = name;
-                if (dateStart) fieldsToUpdate.dateStart = dateStart;
-                if (location) fieldsToUpdate.location = location;
-                if (prizePool) fieldsToUpdate.prizePool = prizePool;
-                if (buyIn) fieldsToUpdate.buyIn = buyIn;
-                if (placesPaid) fieldsToUpdate.placesPaid = placesPaid;
-                if (description) fieldsToUpdate.description = description;
-                if (bigBlind) fieldsToUpdate.bigBlind = bigBlind;
-                if (smallBlind) fieldsToUpdate.smallBlind = smallBlind;
-
-                // 🔹 Validation + update de la distribution
-                if (payoutDistribution) {
-                    const total = payoutDistribution.reduce((sum, p) => sum + p.percent, 0);
-                    if (total !== 100) {
-                        return res
-                            .status(400)
-                            .json({ error: "Payout distribution must sum to 100%" });
-                    }
-                    fieldsToUpdate.payoutDistribution = payoutDistribution;
+                const total = parsedPayout.reduce((sum, p) => sum + Number(p.percent), 0);
+                if (total !== 100) {
+                    return res.status(400).json({ error: "Payout distribution must sum to 100%" });
                 }
-
-                await game.update(fieldsToUpdate);
-                res.status(200).json({ message: "Game updated", fieldsToUpdate });
+                fieldsToUpdate.payoutDistribution = parsedPayout;
             }
 
+            await game.update(fieldsToUpdate);
+
+            res.status(200).json({ message: "Game updated", fieldsToUpdate });
 
         } catch (error) {
-            console.error(error);
+            console.error("Update game error:", error);
             res.status(500).json({ error: "Error updating game" });
         }
     },
+
     deleteGame: async (req, res) => {
         try {
             const { id } = req.params;

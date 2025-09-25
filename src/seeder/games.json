@@ -2,85 +2,191 @@
   {
     "name": "Friday Night Poker",
     "dateStart": "2025-09-20T20:00:00Z",
+    "realStart": "2025-09-20T20:15:00Z",
     "dateEnd": "2025-09-20T23:30:00Z",
-    "location": "Home",     
+    "location": "Home",
     "buyIn": 10,
     "prizePool": 100,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 70
+      },
+      {
+        "place": 2,
+        "percent": 30
+      }
+    ],
     "status": "finished",
     "placesPaid": 2,
-    "description": "Weekly home game",
+    "allowRebuys": false,
+    "enableBlindTimer": false,
+    "levelDuration": 15,
+    "maxPlayers": 8,
     "bigBlind": 20,
     "smallBlind": 10,
+    "description": "Weekly home game",
+    "inviteCode": null,
     "host": "AceHigh"
   },
   {
     "name": "Sunday Deepstack",
     "dateStart": "2025-09-21T18:00:00Z",
+    "realStart": "2025-09-21T18:20:00Z",
     "dateEnd": "2025-09-22T01:00:00Z",
-    "location": "Casino",             
+    "location": "Casino",
     "buyIn": 20,
     "prizePool": 200,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 50
+      },
+      {
+        "place": 2,
+        "percent": 30
+      },
+      {
+        "place": 3,
+        "percent": 20
+      }
+    ],
     "status": "finished",
     "placesPaid": 3,
-    "description": "Deep structure",
+    "allowRebuys": false,
+    "enableBlindTimer": false,
+    "levelDuration": 20,
+    "maxPlayers": 10,
     "bigBlind": 50,
     "smallBlind": 25,
+    "description": "Deep structure",
+    "inviteCode": null,
     "host": "RiverQueen"
   },
   {
     "name": "Midweek Madness",
     "dateStart": "2025-09-24T19:30:00Z",
+    "realStart": "2025-09-24T19:40:00Z",
     "dateEnd": null,
-    "location": "Online",             
+    "location": "Online",
     "buyIn": 15,
     "prizePool": 150,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 70
+      },
+      {
+        "place": 2,
+        "percent": 30
+      }
+    ],
     "status": "active",
     "placesPaid": 2,
-    "description": "Fast blinds",
+    "allowRebuys": false,
+    "enableBlindTimer": true,
+    "levelDuration": 10,
+    "maxPlayers": 9,
     "bigBlind": 30,
     "smallBlind": 15,
+    "description": "Fast blinds",
+    "inviteCode": null,
     "host": "ChipMonster"
   },
   {
     "name": "Turbo Tuesday",
     "dateStart": "2025-09-30T20:00:00Z",
+    "realStart": "2025-09-30T20:05:00Z",
     "dateEnd": null,
-    "location": "Club",               
+    "location": "Club",
     "buyIn": 5,
     "prizePool": 50,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 100
+      }
+    ],
     "status": "pending",
     "placesPaid": 1,
-    "description": "Quick fire",
+    "allowRebuys": false,
+    "enableBlindTimer": false,
+    "levelDuration": 5,
+    "maxPlayers": 6,
     "bigBlind": 10,
     "smallBlind": 5,
+    "description": "Quick fire",
+    "inviteCode": null,
     "host": "TiltKing"
   },
   {
     "name": "High Roller Night",
     "dateStart": "2025-10-05T21:00:00Z",
+    "realStart": "2025-10-05T21:15:00Z",
     "dateEnd": null,
-    "location": "Casino",             
+    "location": "Casino",
     "buyIn": 100,
     "prizePool": 1000,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 50
+      },
+      {
+        "place": 2,
+        "percent": 30
+      },
+      {
+        "place": 3,
+        "percent": 20
+      }
+    ],
     "status": "pending",
     "placesPaid": 3,
-    "description": "For the brave",
+    "allowRebuys": true,
+    "enableBlindTimer": true,
+    "levelDuration": 20,
+    "maxPlayers": 20,
     "bigBlind": 200,
     "smallBlind": 100,
+    "description": "For the brave",
+    "inviteCode": null,
     "host": "LuckyLuke"
   },
   {
     "name": "Casual Friday",
     "dateStart": "2025-10-10T20:00:00Z",
+    "realStart": "2025-10-10T20:10:00Z",
     "dateEnd": null,
-    "location": "Home",              
+    "location": "Home",
     "buyIn": 10,
     "prizePool": 100,
+    "currency": "EUR",
+    "payoutDistribution": [
+      {
+        "place": 1,
+        "percent": 70
+      },
+      {
+        "place": 2,
+        "percent": 30
+      }
+    ],
     "status": "pending",
     "placesPaid": 2,
-    "description": "Fun & beers",
+    "allowRebuys": false,
+    "enableBlindTimer": false,
+    "levelDuration": 15,
+    "maxPlayers": 8,
     "bigBlind": 20,
     "smallBlind": 10,
+    "description": "Fun & beers",
+    "inviteCode": null,
     "host": "CalmCall"
   }
 ]

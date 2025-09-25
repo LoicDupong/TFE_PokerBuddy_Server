@@ -1,8 +1,19 @@
 [
   { "user": "AceHigh", "friend": "RiverQueen", "status": "accepted" },
+  { "user": "RiverQueen", "friend": "AceHigh", "status": "accepted" },
+
   { "user": "AceHigh", "friend": "ChipMonster", "status": "accepted" },
+  { "user": "ChipMonster", "friend": "AceHigh", "status": "accepted" },
+
   { "user": "TiltKing", "friend": "LuckyLuke", "status": "pending" },
+  { "user": "LuckyLuke", "friend": "TiltKing", "status": "pending" },
+
   { "user": "CalmCall", "friend": "BluffMaster", "status": "accepted" },
+  { "user": "BluffMaster", "friend": "CalmCall", "status": "accepted" },
+
   { "user": "AllInAndy", "friend": "GrinderJoe", "status": "accepted" },
-  { "user": "SilentSam", "friend": "AceHigh", "status": "declined" }
+  { "user": "GrinderJoe", "friend": "AllInAndy", "status": "accepted" },
+
+  { "user": "SilentSam", "friend": "AceHigh", "status": "declined" },
+  { "user": "AceHigh", "friend": "SilentSam", "status": "declined" }
 ]

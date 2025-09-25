@@ -59,6 +59,7 @@ async function seederInsert() {
         const rowsGames = gamesJSON.map(g => ({
             name: g.name,
             dateStart: g.dateStart,
+            realStart: g.realStart,
             dateEnd: g.dateEnd,
             location: g.location,
             buyIn: g.buyIn,
@@ -73,7 +74,7 @@ async function seederInsert() {
 
         const createdGames = await db.Game.bulkCreate(rowsGames, {
             updateOnDuplicate: [
-                "name", "dateStart", "dateEnd", "location",
+                "name", "dateStart", "realStart", "dateEnd", "location",
                 "buyIn", "prizePool", "status", "placesPaid",
                 "description", "bigBlind", "smallBlind", "hostId"
             ],

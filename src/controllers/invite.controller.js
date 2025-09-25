@@ -74,7 +74,16 @@ const inviteController = {
                 ]
             });
 
-            res.status(200).json({ invites });
+            res.status(200).json({
+                invites: invites.map(i => ({
+                    id: i.id,
+                    type: i.user ? "user" : "guest",
+                    username: i.user?.username || i.guestName,
+                    email: i.user?.email || (i.guestName?.includes("@") ? i.guestName : null),
+                    confirmed: i.isConfirmed,
+                }))
+            });
+
         } catch (error) {
             console.error("Get invites error:", error);
             return res.status(500).json({ error: "Error fetching invites" });
