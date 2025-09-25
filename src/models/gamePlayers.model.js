@@ -30,23 +30,17 @@ export default function gamePlayersModel(sequelize) {
             onDelete: 'SET NULL',
             onUpdate: 'CASCADE',
         },
-        userName:{
+        userName: {
             type: DataTypes.STRING,
             allowNull: true,
-            references: {
-                model: 'users',
-                key: 'username',
-            },
-            onDelete: 'SET NULL',
-            onUpdate: 'CASCADE',
         },
         guestName: {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        isConfirmed: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
+        status: {
+            type: DataTypes.ENUM("pending", "accepted", "refused"),
+            defaultValue: "pending",
         },
     }, {
         tableName: 'game_players',

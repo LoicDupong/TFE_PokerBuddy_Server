@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, or } from "sequelize";
 import db from "../models/index.js";
 import { updateGameStatus } from "../utils/gameStatus.utils.js";
 
@@ -28,9 +28,6 @@ const gameController = {
                 payoutDistribution,
                 invites,
             } = req.body;
-
-            // Debug brut de ce que ton front envoie
-            console.log("📥 Raw req.body:", req.body);
 
             // ✅ PayoutDistribution
             let parsedPayout = null;
@@ -91,6 +88,7 @@ const gameController = {
                 const parsedInvites =
                     typeof invites === "string" ? JSON.parse(invites) : invites;
 
+                console.log("📨 Invites reçues:", parsedInvites); // 👈 LOG DEBUG
                 const gamePlayers = [];
 
                 if (parsedInvites.friends?.length) {
@@ -125,7 +123,6 @@ const gameController = {
                 }
 
                 if (gamePlayers.length) {
-                    console.log("👥 Insertion GamePlayers:", gamePlayers);
                     await db.GamePlayer.bulkCreate(gamePlayers, { transaction: t });
                 }
             }
@@ -150,18 +147,34 @@ const gameController = {
 
 
     getAllGames: async (req, res) => {
+        let order = [["dateStart", "DESC"]];
+        let where = {
+            [Op.or]: [
+                { hostId: req.user.id },                // si user est host
+                { "$playerLinks.userId$": req.user.id } // si user est joueur
+            ]
+        };
+
         try {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
+            const now = new Date();
+
+            if (req.query.filter === "upcoming") {
+                where.dateStart = { [Op.gte]: now }; // uniquement futur
+                order = [["dateStart", "ASC"]];
+            } else if (req.query.filter === "finished") {
+                where.dateStart = { [Op.lt]: now }; // uniquement passé
+                order = [["dateStart", "DESC"]];
+            }
+
             const games = await db.Game.findAll({
                 include: [
-                    // 👑 Host
                     {
                         model: db.User,
                         as: "host",
                         attributes: ["id", "username", "email"],
                     },
-                    // 🎮 Joueurs
                     {
                         model: db.GamePlayer,
                         as: "playerLinks",
@@ -173,7 +186,6 @@ const gameController = {
                             },
                         ],
                     },
-                    // 🏆 Résultats
                     {
                         model: db.GameResult,
                         as: "results",
@@ -192,13 +204,8 @@ const gameController = {
                         ],
                     },
                 ],
-                where: {
-                    [Op.or]: [
-                        { hostId: req.user.id },                // si user est host
-                        { "$playerLinks.userId$": req.user.id } // si user est joueur
-                    ],
-                },
-                order: [["dateStart", "DESC"]],
+                where,
+                order,
             });
 
             const updatedGames = await Promise.all(
@@ -211,6 +218,7 @@ const gameController = {
             res.status(500).json({ error: "Error fetching games" });
         }
     },
+
 
     getGameById: async (req, res) => {
         try {

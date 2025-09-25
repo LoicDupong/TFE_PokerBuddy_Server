@@ -13,6 +13,10 @@ inviteRouter
 // Confirmation d'une invitation
 inviteRouter
   .route("/:gameId/invites/confirm")
-  .patch(authorizeMiddleware(), inviteController.confirmInvite);
+  .patch(authorizeMiddleware(), inviteController.respondInvite);
+
+inviteRouter
+  .route("/invites/me")
+  .get(authorizeMiddleware(), inviteController.getMyInvites);
 
 export default inviteRouter;
