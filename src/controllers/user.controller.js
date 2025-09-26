@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import db from "../models/index.js"; // Sequelize models
 
 const userController = {
@@ -223,6 +224,30 @@ const userController = {
     } catch (error) {
 
       res.status(500).json({ error: "Error deleting profile" });
+    }
+  },
+
+  searchByUsername: async (req, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { username } = req.query;
+      if (!username || username.trim() === "") {
+        return res.status(400).json({ error: "Username is required" });
+      }
+
+      const users = await db.User.findAll({
+        where: {
+          username: { [Op.iLike]: `%${username}%` }, // recherche insensible à la casse
+        },
+        attributes: ["id", "username", "avatar"], // ce que tu veux exposer
+        limit: 10,
+      });
+
+      return res.status(200).json({ users });
+    } catch (error) {
+      console.error("searchByUsername error:", error);
+      return res.status(500).json({ error: "Error searching users" });
     }
   },
 };

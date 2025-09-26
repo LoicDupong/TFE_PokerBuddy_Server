@@ -26,7 +26,7 @@ const friendController = {
                 friendId,
                 status: "pending",
             });
-
+            
             res.status(201).json({ message: "Friend request sent", invite });
         } catch (error) {
             console.error("Send invite error:", error);
@@ -34,11 +34,26 @@ const friendController = {
         }
     },
 
+    // Lister les invitations reçues (pending)
+    getInvites: async (req, res) => {
+        try {
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+            const invites = await db.Friend.findAll({
+                where: { friendId: req.user.id, status: "pending" },
+                include: [{ model: db.User, as: "User", attributes: ["id", "username", "email"] }],
+            });
+            res.status(200).json({ invites });
+        } catch (error) {
+            console.error("Get invites error:", error);
+            res.status(500).json({ error: "Error fetching invites" });
+        }
+    },
+
     // Accepter ou refuser une invitation
     respondInvite: async (req, res) => {
         try {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
+            
             const { inviteId } = req.params;
             const { action } = req.body; // "accept" ou "decline"
 
@@ -90,20 +105,6 @@ const friendController = {
         }
     },
 
-    // Lister les invitations reçues (pending)
-    getInvites: async (req, res) => {
-        try {
-            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-            const invites = await db.Friend.findAll({
-                where: { friendId: req.user.id, status: "pending" },
-                include: [{ model: db.User, as: "User", attributes: ["id", "username", "email"] }],
-            });
-            res.status(200).json({ invites });
-        } catch (error) {
-            console.error("Get invites error:", error);
-            res.status(500).json({ error: "Error fetching invites" });
-        }
-    },
 
     // Supprimer un ami
     removeFriend: async (req, res) => {

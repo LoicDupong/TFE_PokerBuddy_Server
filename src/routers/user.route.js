@@ -12,15 +12,19 @@ userRouter
   .route("/me")
   .get(authorizeMiddleware(), userController.me)
   .patch(
-    authorizeMiddleware(), 
+    authorizeMiddleware(),
     upload.single("avatar"),
     userController.updateMe
   )
-  .put(authorizeMiddleware(), userController.deleteMe);
+  .delete(authorizeMiddleware(), userController.deleteMe);
+
+// 🔹 recherche par username
+userRouter
+  .route('/search')
+  .get(authorizeMiddleware(), userController.searchByUsername);
 
 userRouter
   .route("/:id")
-  .get(userController.getUser)
-
+  .get(userController.getUser);
 
 export default userRouter;

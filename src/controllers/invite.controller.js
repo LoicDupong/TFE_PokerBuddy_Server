@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import db from "../models/index.js";
 
 const inviteController = {
@@ -102,8 +103,10 @@ const inviteController = {
                 ],
             });
 
+            const filteredInvites = invites.filter(i => i.game.host.username !== req.user.username);
+
             res.status(200).json({
-                invites: invites.map((i) => ({
+                invites: filteredInvites.map((i) => ({
                     inviteId: i.id,
                     gameId: i.game.id,
                     gameName: i.game.name,
