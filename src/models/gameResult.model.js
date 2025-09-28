@@ -24,7 +24,7 @@ export default function gameResultModel(sequelize) {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'games', 
+                model: 'games',
                 key: 'id',
             },
             onDelete: 'CASCADE',
@@ -42,6 +42,12 @@ export default function gameResultModel(sequelize) {
         },
     }, {
         tableName: 'game_results',
+        indexes: [
+            {
+                unique: true,
+                fields: ['gameId', 'gamePlayerId'] // ✅ contrainte anti-doublon
+            }
+        ],
         timestamps: true,
         createdAt: 'createdAt',
         updatedAt: 'updatedAt',

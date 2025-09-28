@@ -8,7 +8,7 @@ const resultsController = {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
             const { gameId } = req.params;
-            const { results } = req.body;
+            const { results, finishedAt } = req.body;
 
             // Vérif game
             const game = await db.Game.findByPk(gameId, {
@@ -31,7 +31,10 @@ const resultsController = {
                 return res.status(400).json({ error: "Results must be a non-empty array" });
             }
 
-            // Enregistre les résultats
+            // 🔹 Supprimer anciens résultats
+            await db.GameResult.destroy({ where: { gameId: game.id } });
+
+            // 🔹 Enregistrer les nouveaux résultats
             const createdResults = [];
             for (const r of results) {
                 const player = game.playerLinks.find(p => p.id === r.gamePlayerId);
@@ -49,15 +52,26 @@ const resultsController = {
                 createdResults.push(result);
             }
 
-            // Termine la game
-            await game.update({ status: "finished", dateEnd: new Date() });
+            // 🔹 Trier avant de renvoyer
+            createdResults.sort((a, b) => a.rank - b.rank);
 
-            res.status(201).json({ message: "Results saved", results: createdResults });
+            // 🔹 Terminer la game
+            await game.update({
+                status: "finished",
+                dateEnd: finishedAt ? new Date(finishedAt) : new Date(),
+            });
+
+            return res.status(201).json({
+                message: "Results saved",
+                results: createdResults
+            });
+
         } catch (error) {
             console.error("CreateResults error:", error);
-            res.status(500).json({ error: "Error saving results" });
+            return res.status(500).json({ error: "Error saving results" });
         }
     },
+
 
     getResults: async (req, res) => {
         try {
