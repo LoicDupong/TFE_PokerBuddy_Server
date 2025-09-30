@@ -7,12 +7,16 @@ import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
 
 // Récupération des variables d'env
-const { DB_DATABASE, DB_USER, DB_PASSWORD, DB_SERVER, DB_PORT } = process.env;
+const { DATABASE_URL } = process.env;
 
-const sequelize = new Sequelize(DB_DATABASE, DB_USER, DB_PASSWORD, {
-  host: DB_SERVER,
-  port: DB_PORT,
-  dialect: 'postgres'
+const sequelize = new Sequelize(DATABASE_URL, {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false, // ⚠️ obligatoire pour Neon
+    },
+  },
 });
 
 const db = {};

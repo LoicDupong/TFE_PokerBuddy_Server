@@ -5,26 +5,29 @@ class FriendsService {
    * *Crée une demande d'ami (symétrique : 1 seule ligne en DB)
    */
   static async addFriend(userId, friendId) {
-    // Empêche l'auto-relation
     if (userId === friendId) {
       throw new Error("Un utilisateur ne peut pas être ami avec lui-même");
     }
 
-    // Forcer la symétrie : userId < friendId
-    if (userId > friendId) {
-      [userId, friendId] = [friendId, userId];
-    }
-
-    // Vérifie si la relation existe déjà
+    // Vérifie la relation dans les deux sens
     const existing = await db.Friend.findOne({
-      where: { userId, friendId },
+      where: {
+        [db.sequelize.Op.or]: [
+          { userId, friendId },
+          { userId: friendId, friendId: userId },
+        ]
+      }
     });
 
     if (existing) {
       throw new Error("Cette relation existe déjà");
     }
 
-    // Crée la relation en status pending
+    // Toujours stocker avec userId < friendId pour la cohérence
+    if (userId > friendId) {
+      [userId, friendId] = [friendId, userId];
+    }
+
     return await db.Friend.create({
       userId,
       friendId,
@@ -32,16 +35,19 @@ class FriendsService {
     });
   }
 
+
   /**
    * *Accepte une demande d'ami
    */
   static async acceptFriend(userId, friendId) {
-    if (userId > friendId) {
-      [userId, friendId] = [friendId, userId];
-    }
-
+    // Cherche la relation dans les deux sens
     const relation = await db.Friend.findOne({
-      where: { userId, friendId },
+      where: {
+        [db.sequelize.Op.or]: [
+          { userId, friendId },
+          { userId: friendId, friendId: userId },
+        ]
+      }
     });
 
     if (!relation) {
@@ -52,16 +58,18 @@ class FriendsService {
     return await relation.save();
   }
 
+
   /**
    * *Refuse / supprime une demande d'ami
    */
   static async removeFriend(userId, friendId) {
-    if (userId > friendId) {
-      [userId, friendId] = [friendId, userId];
-    }
-
     return await db.Friend.destroy({
-      where: { userId, friendId },
+      where: {
+        [db.sequelize.Op.or]: [
+          { userId, friendId },
+          { userId: friendId, friendId: userId },
+        ]
+      }
     });
   }
 

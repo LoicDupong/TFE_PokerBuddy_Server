@@ -1,18 +1,14 @@
-import express from 'express';
-import { apiRouter } from './routers/index.js';
-import morgan from 'morgan';
-import cors from 'cors';
-import { authMiddleware } from './middlewares/auth.middleware.js';
+import express from "express";
+import { apiRouter } from "./routers/index.js";
+import morgan from "morgan";
+import cors from "cors";
+import { authMiddleware } from "./middlewares/auth.middleware.js";
 
-// Variable d'en
-const { NODE_ENV, PORT } = process.env;
-
-// WebAPI setup
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(morgan('tiny'));
+app.use(morgan("tiny"));
 app.use(express.json());
 
 // Simple logger middleware
@@ -21,22 +17,21 @@ app.use((req, res, next) => {
   next();
 });
 
-
 // Static files (images, etc.)
-app.use('/public', express.static('public'));
+app.use("/public", express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
-
 // Routing
-app.use('/api', authMiddleware(), apiRouter);
+app.use("/api", authMiddleware(), apiRouter);
 
 // Start
-app.listen(PORT, (error) => {
-    if (error) {
-        console.log('Web API on error');
-        console.log(error);
-        return;
-    }
+const PORT = process.env.PORT || 8080;
+const NODE_ENV = process.env.NODE_ENV || "development";
 
-    console.log(`Serveur lancé sur http://localhost:${PORT} (${NODE_ENV})`);
+app.listen(PORT, (error) => {
+  if (error) {
+    console.error("❌ Web API failed to start:", error);
+    return;
+  }
+  console.log(`🚀 Server running on port ${PORT} (${NODE_ENV})`);
 });
