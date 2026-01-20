@@ -1,32 +1,80 @@
-# PokerBuddy — Server (API)
+# PokerBuddy ♠️  
+**Home poker nights, made simple.**
 
-Backend API for **PokerBuddy**, a home-poker event management app.
-
-## Tech stack
-- Node.js + Express
-- PostgreSQL
-- Sequelize ORM
-- JWT authentication
-
-## Features (V1)
-- Authentication (register/login)
-- Session (poker night) management
-- Game / in-game data storage (as used by the client)
-- History & statistics (as used by the client)
-
-## Roadmap
-- Elo ranking
-- Invitations by email
-- Calendar integration (ICS / provider integration)
+PokerBuddy is a web application designed to help players **organize, run, and track home poker sessions**.  
+It centralizes everything needed before, during, and after a game night — from session creation to in-game tools and long-term statistics.
 
 ---
 
-## Getting started
+## Why PokerBuddy?
 
-### 1) Requirements
-- Node.js (LTS recommended)
-- PostgreSQL running locally or in the cloud
+Home poker nights are often managed with:
+- scattered WhatsApp messages
+- manual blind timers
+- notes on paper or spreadsheets
 
-### 2) Install
+PokerBuddy replaces all of that with **one clean, mobile-first app**.
+
+---
+
+## Key Features (V1)
+
+### 🗓️ Session management
+- Create and manage poker nights
+- View upcoming and past sessions
+- Track players and results per session
+
+### ⏱️ In-game tools
+- Timer designed for live poker
+- Structured flow adapted to home games
+- Focus on usability during play (mobile-first)
+
+### 📊 History & statistics
+- Session history
+- Player results and winnings
+- Win ratio and performance overview
+
+### 📖 Poker rules
+- Centralized rules reference for players
+
+---
+
+## Roadmap
+- **Elo ranking system** to measure player skill over time
+- **Email invitations**
+- **Calendar integration** (event invites / ICS)
+
+---
+
+## Tech Stack
+
+- **Frontend:** Next.js (App Router)
+- **Styling:** SCSS / Sass (no Tailwind)
+- **Backend:** Express.js
+- **Database:** PostgreSQL + Sequelize
+- **Auth:** JWT
+- **Approach:** mobile-first, front-first
+
+---
+
+## Project Context
+
+PokerBuddy is a **Final Project (TFE)** developed as part of a **Full-Stack JavaScript training**.  
+The goal was to deliver a **complete, usable V1** within a limited timeframe, focusing on:
+- clean architecture
+- real-world features
+- maintainability and scalability
+
+---
+
+## Status
+✅ V1 completed  
+🚧 Advanced features in progress (Elo, invitations, calendar)
+
+---
+
+## Installation (local)
+
 ```bash
 npm install
+npm run dev
