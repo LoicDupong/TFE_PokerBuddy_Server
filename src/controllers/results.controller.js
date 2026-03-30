@@ -78,6 +78,15 @@ const resultsController = {
                 .map(p => createNotification(p.userId, 'game_result', `Results for "${game.name}" are in`, game.id));
             await Promise.all(notifyPromises);
 
+            // Non-blocking cleanup — remove the result reminder now that the game is finished
+            try {
+                await db.Notification.destroy({
+                    where: { userId: game.hostId, type: "game_result_reminder", referenceId: game.id },
+                });
+            } catch (err) {
+                console.error("Reminder cleanup failed (non-blocking):", err);
+            }
+
             return res.status(201).json({
                 message: "Results saved",
                 results: createdResults

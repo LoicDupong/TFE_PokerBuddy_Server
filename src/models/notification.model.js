@@ -26,7 +26,8 @@ export default function notificationModel(sequelize) {
                 'friend_accepted',
                 'game_invite',
                 'game_invite_responded',
-                'game_result'
+                'game_result',
+                'game_result_reminder'
             ),
             allowNull: false,
         },

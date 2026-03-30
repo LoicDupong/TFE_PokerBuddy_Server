@@ -1,9 +1,12 @@
 import db from "../models/index.js";
+import { triggerResultReminders } from "../utils/notification.utils.js";
 
 const notificationController = {
     getMyNotifications: async (req, res) => {
         try {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+            await triggerResultReminders(req.user.id);
 
             const notifications = await db.Notification.findAll({
                 where: { userId: req.user.id },
