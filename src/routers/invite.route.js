@@ -10,14 +10,14 @@ inviteRouter
   .post(authorizeMiddleware(), inviteController.invitePlayer)
   .get(authorizeMiddleware(), inviteController.getInvitesList);
 
+// Mes invitations (route spécifique avant la route paramétrée)
+inviteRouter
+  .route("/invites/me")
+  .get(authorizeMiddleware(), inviteController.getMyInvites);
+
 // Confirmation d'une invitation
 inviteRouter
   .route("/invites/:inviteId")
   .patch(authorizeMiddleware(), inviteController.respondInvite);
-
-
-inviteRouter
-  .route("/invites/me")
-  .get(authorizeMiddleware(), inviteController.getMyInvites);
 
 export default inviteRouter;

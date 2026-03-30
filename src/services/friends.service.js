@@ -1,5 +1,10 @@
 import db from "../models/index.js";
 
+// NOTE: This service is not used by friend.controller.js.
+// Its addFriend() normalizes storage order (userId < friendId) which conflicts
+// with the directional model that getInvites() relies on (friendId = recipient).
+// The controller handles all friend logic directly.
+// Candidate for deletion once the social system is fully stable.
 class FriendsService {
   /**
    * *Crée une demande d'ami (symétrique : 1 seule ligne en DB)

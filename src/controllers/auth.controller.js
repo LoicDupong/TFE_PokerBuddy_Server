@@ -12,16 +12,18 @@ const authController = {
             return res.status(400).json({ error: "Email or password missing !" });
         }
 
-        const userExists = await db.User.findOne({ where: { email : email } });
-        
-        
-        if (userExists) {
-            return res.status(409).json({ error: "User already exists !" });
+        const emailExists = await db.User.findOne({ where: { email } });
+        if (emailExists) {
+            return res.status(409).json({ error: "Email already in use" });
+        }
+
+        const usernameExists = await db.User.findOne({ where: { username } });
+        if (usernameExists) {
+            return res.status(409).json({ error: "Username already taken" });
         }
 
         // Hashage du mot de passe
         const hash = await argon2.hash(password);
-        console.log(hash);
 
         // Création de l'utilisateur
         const newUser = await db.User.create({
@@ -61,15 +63,20 @@ const authController = {
         // Génération du token
         const token = await generateToken(user);
 
-        res.status(200).json({ user, token: token });
+        const { password: _, ...safeUser } = user.get({ plain: true });
+        res.status(200).json({ user: safeUser, token });
     },
 
     me: async (req, res) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-        res.status(200).json({
-            user: { id: req.user.id, username: req.user.username, email: req.user.email },
+        const user = await db.User.findByPk(req.user.id, {
+            attributes: ["id", "username", "email", "avatar"],
         });
+
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        res.status(200).json({ user: user.get({ plain: true }) });
     },
 
     updatePassword: async (req, res) => {

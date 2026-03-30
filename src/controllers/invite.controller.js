@@ -1,5 +1,5 @@
-import { Op } from "sequelize";
 import db from "../models/index.js";
+import { createNotification } from "../utils/notification.utils.js";
 
 const inviteController = {
     // 🔹 Inviter un user ou guest
@@ -19,6 +19,10 @@ const inviteController = {
                 return res.status(403).json({ error: "Only the host can invite players" });
             }
 
+            if (game.status === "finished") {
+                return res.status(400).json({ error: "Cannot invite players to a finished game" });
+            }
+
             // Cas 1 : user existant
             if (userId) {
                 const existingUser = await db.User.findByPk(userId);
@@ -32,6 +36,7 @@ const inviteController = {
                 }
 
                 const invited = await db.GamePlayer.create({ gameId, userId, status: "pending" });
+                await createNotification(userId, 'game_invite', `You were invited to "${game.name}"`, game.id);
                 return res.status(201).json({ message: "User invited", invited });
             }
 
@@ -62,6 +67,12 @@ const inviteController = {
             const game = await db.Game.findByPk(gameId);
             if (!game) {
                 return res.status(404).json({ error: "Game not found" });
+            }
+
+            const isHost = game.hostId === req.user.id;
+            const isPlayer = await db.GamePlayer.findOne({ where: { gameId, userId: req.user.id } });
+            if (!isHost && !isPlayer) {
+                return res.status(403).json({ error: "Access denied" });
             }
 
             const invites = await db.GamePlayer.findAll({
@@ -97,13 +108,15 @@ const inviteController = {
                     {
                         model: db.Game,
                         as: "game",
-                        attributes: ["id", "name", "dateStart", "location"],
+                        attributes: ["id", "name", "dateStart", "location", "hostId", "status"],
                         include: [{ model: db.User, as: "host", attributes: ["id", "username"] }],
                     },
                 ],
             });
 
-            const filteredInvites = invites.filter(i => i.game.host.username !== req.user.username);
+            const filteredInvites = invites.filter(i =>
+                i.game.hostId !== req.user.id && i.game.status !== "finished"
+            );
 
             res.status(200).json({
                 invites: filteredInvites.map((i) => ({
@@ -145,8 +158,13 @@ const inviteController = {
             if (invite.game.status === "finished") {
                 return res.status(400).json({ error: "Game already finished" });
             }
+            if (invite.status !== "pending") {
+                return res.status(409).json({ error: "Invite already responded to" });
+            }
 
             await invite.update({ status });
+            const statusText = status === 'accepted' ? 'accepted' : 'declined';
+            await createNotification(invite.game.hostId, 'game_invite_responded', `${req.user.username} ${statusText} your invitation to "${invite.game.name}"`, invite.game.id);
             return res.status(200).json({ message: "Invite updated", invite });
         } catch (error) {
             console.error("Respond invite error:", error);

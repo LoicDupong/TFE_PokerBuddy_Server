@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/app.js",
-    "dev": "nodemon --env-file=.env src/app.js",
+    "dev": "nodemon --env-file=.env.local src/app.js",
+    "prod": "nodemon --env-file=.env src/app.js",
     "seed": "node src/seeder/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

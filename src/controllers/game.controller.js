@@ -41,7 +41,7 @@ const gameController = {
                     (sum, p) => sum + Number(p.percent),
                     0
                 );
-                if (total !== 100) {
+                if (Math.abs(total - 100) > 0.01) {
                     return res
                         .status(400)
                         .json({ error: "Payout distribution must sum to 100%" });
@@ -77,9 +77,6 @@ const gameController = {
                 hostId: req.user.id,
             };
 
-            // Log clair de ce que tu vas insérer
-            console.log("📦 Payload envoyé à Sequelize:", payload);
-
             // ✅ Création du Game
             const newGame = await db.Game.create(payload, { transaction: t });
 
@@ -88,7 +85,6 @@ const gameController = {
                 const parsedInvites =
                     typeof invites === "string" ? JSON.parse(invites) : invites;
 
-                console.log("📨 Invites reçues:", parsedInvites); // 👈 LOG DEBUG
                 const gamePlayers = [];
 
                 if (parsedInvites.friends?.length) {
@@ -97,7 +93,7 @@ const gameController = {
                             gameId: newGame.id,
                             userId: f.id,
                             userName: f.name,
-                            isConfirmed: false,
+                            status: "pending",
                         });
                     }
                 }
@@ -107,7 +103,7 @@ const gameController = {
                         gamePlayers.push({
                             gameId: newGame.id,
                             guestName: g,
-                            isConfirmed: false,
+                            status: "pending",
                         });
                     }
                 }
@@ -117,7 +113,7 @@ const gameController = {
                         gamePlayers.push({
                             gameId: newGame.id,
                             guestName: e,
-                            isConfirmed: false,
+                            status: "pending",
                         });
                     }
                 }
@@ -128,8 +124,6 @@ const gameController = {
             }
 
             await t.commit();
-            console.log("✅ Game created with invites");
-
             res.status(201).json({ game: newGame });
         } catch (error) {
             await t.rollback();
@@ -147,24 +141,48 @@ const gameController = {
 
 
     getAllGames: async (req, res) => {
-        let order = [["dateStart", "DESC"]];
-        let where = {
-            [Op.or]: [
-                { hostId: req.user.id },                // si user est host
-                { "$playerLinks.userId$": req.user.id } // si user est joueur
-            ]
-        };
-
         try {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+            let order = [["dateStart", "DESC"]];
+            let where = {
+                [Op.or]: [
+                    { hostId: req.user.id },                // si user est host
+                    { "$playerLinks.userId$": req.user.id } // si user est joueur
+                ]
+            };
 
             const now = new Date();
 
             if (req.query.filter === "upcoming") {
-                where.dateStart = { [Op.gte]: now }; // uniquement futur
+                const startOfTomorrow = new Date(now);
+                startOfTomorrow.setHours(0, 0, 0, 0);
+                startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+                where.dateStart = { [Op.gte]: startOfTomorrow };
+                where.status = "pending";
+                order = [["dateStart", "ASC"]];
+            } else if (req.query.filter === "today") {
+                const startOfDay = new Date(now);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(now);
+                endOfDay.setHours(23, 59, 59, 999);
+                where.dateStart = { [Op.between]: [startOfDay, endOfDay] };
+                where.status = { [Op.ne]: "finished" };
                 order = [["dateStart", "ASC"]];
             } else if (req.query.filter === "finished") {
-                where.dateStart = { [Op.lt]: now }; // uniquement passé
+                const startOfToday = new Date(now);
+                startOfToday.setHours(0, 0, 0, 0);
+                where[Op.and] = [
+                    {
+                        [Op.or]: [
+                            { dateStart: { [Op.lt]: startOfToday } },
+                            { status: "finished" }
+                        ]
+                    }
+                ];
+                order = [["dateStart", "DESC"]];
+            } else if (req.query.filter === "active") {
+                where.dateStart = { [Op.lte]: now };
                 order = [["dateStart", "DESC"]];
             }
 
@@ -212,7 +230,13 @@ const gameController = {
                 games.map((g) => updateGameStatus(g))
             );
 
-            res.status(200).json({ games: updatedGames });
+            const result = req.query.filter === "active"
+                ? updatedGames.filter((g) => g.status === "active")
+                : req.query.filter === "today"
+                    ? updatedGames.filter((g) => g.status !== "finished")
+                    : updatedGames;
+
+            res.status(200).json({ games: result });
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Error fetching games" });
@@ -340,7 +364,7 @@ const gameController = {
                     : payoutDistribution;
 
                 const total = parsedPayout.reduce((sum, p) => sum + Number(p.percent), 0);
-                if (total !== 100) {
+                if (Math.abs(total - 100) > 0.01) {
                     return res.status(400).json({ error: "Payout distribution must sum to 100%" });
                 }
                 fieldsToUpdate.payoutDistribution = parsedPayout;

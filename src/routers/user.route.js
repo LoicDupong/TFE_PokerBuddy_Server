@@ -6,7 +6,7 @@ import upload from "../middlewares/upload.middleware.js";
 const userRouter = Router();
 
 userRouter.route("/")
-  .get(userController.getAllUsers);
+  .get(authorizeMiddleware(), userController.getAllUsers);
 
 userRouter
   .route("/me")

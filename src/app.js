@@ -7,7 +7,11 @@ import { authMiddleware } from "./middlewares/auth.middleware.js";
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS: in production, restrict to the frontend origin via ALLOWED_ORIGIN env var.
+// In local dev, ALLOWED_ORIGIN is not set → fallback to "*" (all origins allowed).
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || "*",
+}));
 app.use(morgan("tiny"));
 app.use(express.json());
 

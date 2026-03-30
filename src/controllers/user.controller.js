@@ -17,7 +17,6 @@ const userController = {
   getUser: async (req, res) => {
     try {
       const { id } = req.params;
-      console.log(id);
 
       const user = await db.User.findByPk(id, {
         attributes: ["id", "username", "avatar", "description", "createdAt"],
@@ -71,7 +70,6 @@ const userController = {
             winRate,
             gamesHosted
           },
-          friends: user.Friends,
         }
       });
     } catch (error) {
@@ -92,7 +90,13 @@ const userController = {
             model: db.User,
             as: "Friends",
             attributes: ["id", "username", "email", "avatar"],
-            through: { attributes: ["status", "createdAt"] },
+            through: { attributes: ["status", "createdAt"], where: { status: "accepted" } },
+          },
+          {
+            model: db.User,
+            as: "FriendOf",
+            attributes: ["id", "username", "email", "avatar"],
+            through: { attributes: ["status", "createdAt"], where: { status: "accepted" } },
           },
         ]
       });
@@ -136,16 +140,25 @@ const userController = {
         where: { hostId: user.id }
       });
 
+      const { Friends, FriendOf, ...userFields } = user.get({ plain: true });
+
+      const seen = new Set();
+      const allFriends = [...(Friends || []), ...(FriendOf || [])].filter(f => {
+        if (seen.has(f.id)) return false;
+        seen.add(f.id);
+        return true;
+      });
+
       res.status(200).json({
         user: {
-          ...user.toJSON(),
+          ...userFields,
           stats: {
             totalGames,
             totalGamesWon,
             winRate,
             gamesHosted
           },
-          friends: user.Friends,
+          friends: allFriends,
         }
       });
     } catch (error) {
@@ -238,7 +251,8 @@ const userController = {
 
       const users = await db.User.findAll({
         where: {
-          username: { [Op.iLike]: `%${username}%` }, // recherche insensible à la casse
+          username: { [Op.iLike]: `%${username}%` },
+          id: { [Op.ne]: req.user.id },
         },
         attributes: ["id", "username", "avatar"], // ce que tu veux exposer
         limit: 10,

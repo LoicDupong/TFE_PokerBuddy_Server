@@ -1,5 +1,6 @@
 import db from "../models/index.js";
 import { Op } from "sequelize";
+import { createNotification } from "../utils/notification.utils.js";
 
 const friendController = {
     // Envoyer une invitation
@@ -14,11 +15,34 @@ const friendController = {
             }
 
             const existing = await db.Friend.findOne({
-                where: { userId: req.user.id, friendId }
+                where: {
+                    status: { [Op.ne]: "declined" },
+                    [Op.or]: [
+                        { userId: req.user.id, friendId },
+                        { userId: friendId, friendId: req.user.id },
+                    ],
+                },
             });
 
             if (existing) {
-                return res.status(400).json({ error: "Friend request already sent" });
+                return res.status(400).json({ error: "Friend request already exists" });
+            }
+
+            // Reuse a declined record if it exists (avoids unique constraint on re-invite)
+            const declined = await db.Friend.findOne({
+                where: {
+                    status: "declined",
+                    [Op.or]: [
+                        { userId: req.user.id, friendId },
+                        { userId: friendId, friendId: req.user.id },
+                    ],
+                },
+            });
+
+            if (declined) {
+                await declined.update({ userId: req.user.id, friendId, status: "pending" });
+                await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, declined.id);
+                return res.status(201).json({ message: "Friend request sent", invite: declined });
             }
 
             const invite = await db.Friend.create({
@@ -26,7 +50,8 @@ const friendController = {
                 friendId,
                 status: "pending",
             });
-            
+
+            await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, invite.id);
             res.status(201).json({ message: "Friend request sent", invite });
         } catch (error) {
             console.error("Send invite error:", error);
@@ -64,8 +89,13 @@ const friendController = {
                 return res.status(403).json({ error: "Not authorized to respond to this invite" });
             }
 
+            if (invite.status !== "pending") {
+                return res.status(409).json({ error: "Invite already responded to" });
+            }
+
             if (action === "accept") {
                 await invite.update({ status: "accepted" });
+                await createNotification(invite.userId, 'friend_accepted', `${req.user.username} accepted your friend request`, invite.id);
             } else if (action === "decline") {
                 await invite.update({ status: "declined" });
             } else {

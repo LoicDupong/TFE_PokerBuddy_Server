@@ -101,7 +101,7 @@ async function seederInsert() {
                         gameId,
                         userId,
                         userName: gr.user,
-                        isConfirmed: true,
+                        status: "accepted",
                     }, { transaction: t });
 
                     gamePlayerMap[`${gr.game}_${gr.user}`] = gp.id;

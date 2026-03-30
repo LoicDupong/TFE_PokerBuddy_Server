@@ -5,6 +5,7 @@ import gameModel from "./game.model.js";
 import gameResultModel from "./gameResult.model.js";
 import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
+import notificationModel from './notification.model.js';
 
 // Récupération des variables d'env
 const { DATABASE_URL } = process.env;
@@ -30,6 +31,7 @@ db.Game = gameModel(sequelize);
 db.GameResult = gameResultModel(sequelize);
 db.Friend = friendModel(sequelize);
 db.GamePlayer = gamePlayersModel(sequelize);
+db.Notification = notificationModel(sequelize);
 
 // ───────────────────────────────
 // USER <-> GAME (Host)
@@ -45,6 +47,13 @@ db.User.belongsToMany(db.User, {
   through: db.Friend,
   foreignKey: "userId",
   otherKey: "friendId",
+});
+
+db.User.belongsToMany(db.User, {
+  as: "FriendOf",
+  through: db.Friend,
+  foreignKey: "friendId",
+  otherKey: "userId",
 });
 
 db.Friend.belongsTo(db.User, { as: "User", foreignKey: "userId" });
@@ -75,4 +84,10 @@ db.Game.hasMany(db.GameResult, { foreignKey: "gameId", as: "results" });
 db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
 
 // L’accès au user se fait via: GameResult → GamePlayer → User
+
+// ───────────────────────────────
+// USER <-> NOTIFICATION
+// ───────────────────────────────
+db.User.hasMany(db.Notification, { foreignKey: ‘userId’, as: ‘notifications’ });
+db.Notification.belongsTo(db.User, { foreignKey: ‘userId’, as: ‘user’ });
 
