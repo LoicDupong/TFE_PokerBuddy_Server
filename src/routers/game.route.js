@@ -11,6 +11,10 @@ gameRouter
     .post(authorizeMiddleware(), gameController.createGame);
 
 gameRouter
+    .route('/:id/ics')
+    .get(authorizeMiddleware(), gameController.getGameIcs);
+
+gameRouter
     .route('/:id')
     .get(authorizeMiddleware(), gameController.getGameById)
     .patch(authorizeMiddleware(), gameController.updateGame)

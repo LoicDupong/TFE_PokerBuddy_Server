@@ -158,8 +158,18 @@ const gameController = {
                 const startOfTomorrow = new Date(now);
                 startOfTomorrow.setHours(0, 0, 0, 0);
                 startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-                where.dateStart = { [Op.gte]: startOfTomorrow };
-                where.status = "pending";
+                // Overwrite base where: host always sees their game; players only if they accepted
+                where = {
+                    [Op.or]: [
+                        { hostId: req.user.id },
+                        {
+                            "$playerLinks.userId$": req.user.id,
+                            "$playerLinks.status$": "accepted",
+                        },
+                    ],
+                    dateStart: { [Op.gte]: startOfTomorrow },
+                    status: "pending",
+                };
                 order = [["dateStart", "ASC"]];
             } else if (req.query.filter === "today") {
                 const startOfDay = new Date(now);
@@ -404,6 +414,45 @@ const gameController = {
         }
     },
 
+    getGameIcs: async (req, res) => {
+        try {
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+            const game = await db.Game.findByPk(req.params.id, {
+                attributes: ["id", "name", "dateStart", "location", "description"],
+            });
+            if (!game) return res.status(404).json({ error: "Game not found" });
+
+            const start = new Date(game.dateStart);
+            const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+
+            const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0];
+            const escape = (str) => (str || "").replace(/[,;\\]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
+
+            const lines = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//PokerBuddy//EN",
+                "BEGIN:VEVENT",
+                `UID:${game.id}@pokerbuddy`,
+                `DTSTAMP:${fmt(new Date())}`,
+                `DTSTART:${fmt(start)}`,
+                `DTEND:${fmt(end)}`,
+                `SUMMARY:${escape(game.name)}`,
+                game.location ? `LOCATION:${escape(game.location)}` : null,
+                game.description ? `DESCRIPTION:${escape(game.description)}` : null,
+                "END:VEVENT",
+                "END:VCALENDAR",
+            ].filter(Boolean).join("\r\n");
+
+            res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+            res.setHeader("Content-Disposition", `attachment; filename="game-${game.id}.ics"`);
+            return res.send(lines);
+        } catch (error) {
+            console.error("getGameIcs error:", error);
+            return res.status(500).json({ error: "Error generating calendar file" });
+        }
+    },
 
 };
 
