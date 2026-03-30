@@ -85,9 +85,7 @@ db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
 
 // L’accès au user se fait via: GameResult → GamePlayer → User
 
-// ───────────────────────────────
 // USER <-> NOTIFICATION
-// ───────────────────────────────
-db.User.hasMany(db.Notification, { foreignKey: ‘userId’, as: ‘notifications’ });
-db.Notification.belongsTo(db.User, { foreignKey: ‘userId’, as: ‘user’ });
+db.User.hasMany(db.Notification, { foreignKey: "userId", as: "notifications" });
+db.Notification.belongsTo(db.User, { foreignKey: "userId", as: "user" });
 
