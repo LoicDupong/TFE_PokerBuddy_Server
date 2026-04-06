@@ -26,49 +26,56 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Total games played
-      const totalGames = await db.GamePlayer.count({
-        where: { userId: user.id },
-        include: [{
-          model: db.Game,
-          as: "game",
-          where: { status: "finished" }
-        }]
-      });
-
-      // Total games won (position = 1)
-      const totalGamesWon = await db.GameResult.count({
+      const gameResults = await db.GameResult.findAll({
         include: [
           {
             model: db.GamePlayer,
             as: "player",
-            where: { userId: user.id }
+            where: { userId: user.id },
+            attributes: [],
           },
           {
             model: db.Game,
             as: "game",
-            where: { status: "finished" }
-          }
+            where: { status: "finished" },
+            attributes: ["buyIn", "placesPaid", "dateEnd"],
+          },
         ],
-        where: { rank: 1 }
+        attributes: ["rank", "prize"],
+        order: [[{ model: db.Game, as: "game" }, "dateEnd", "ASC"]],
       });
 
-      // Win rate %
-      const winRate = totalGames > 0 ? ((totalGamesWon / totalGames) * 100).toFixed(1) : 0;
+      const totalGames = gameResults.length;
+      const wins = gameResults.filter(r => r.rank === 1).length;
+      const losses = totalGames - wins;
+      const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : "0.0";
+      const paidPlaces = gameResults.filter(r => r.rank <= r.game.placesPaid).length;
+      const avgPlacement = totalGames > 0
+        ? (gameResults.reduce((sum, r) => sum + r.rank, 0) / totalGames).toFixed(2)
+        : null;
+      const netResult = gameResults.reduce((sum, r) => sum + (r.prize - r.game.buyIn), 0);
 
-      // Games hosted
-      const gamesHosted = await db.Game.count({
-        where: { hostId: user.id }
-      });
+      let bestStreak = 0, currentStreak = 0;
+      for (const r of gameResults) {
+        if (r.rank === 1) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak); }
+        else { currentStreak = 0; }
+      }
+
+      const gamesHosted = await db.Game.count({ where: { hostId: user.id } });
 
       res.status(200).json({
         user: {
           ...user.toJSON(),
           stats: {
             totalGames,
-            totalGamesWon,
+            wins,
+            losses,
             winRate,
-            gamesHosted
+            paidPlaces,
+            avgPlacement,
+            netResult,
+            bestStreak,
+            gamesHosted,
           },
         }
       });
@@ -105,40 +112,42 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Total games played
-      const totalGames = await db.GamePlayer.count({
-        where: { userId: user.id },
-        include: [{
-          model: db.Game,
-          as: "game",
-          where: { status: "finished" }
-        }]
-      });
-
-      // Total games won (position = 1)
-      const totalGamesWon = await db.GameResult.count({
+      const gameResults = await db.GameResult.findAll({
         include: [
           {
             model: db.GamePlayer,
             as: "player",
-            where: { userId: user.id }
+            where: { userId: user.id },
+            attributes: [],
           },
           {
             model: db.Game,
             as: "game",
-            where: { status: "finished" }
-          }
+            where: { status: "finished" },
+            attributes: ["buyIn", "placesPaid", "dateEnd"],
+          },
         ],
-        where: { rank: 1 }
+        attributes: ["rank", "prize"],
+        order: [[{ model: db.Game, as: "game" }, "dateEnd", "ASC"]],
       });
 
-      // Win rate %
-      const winRate = totalGames > 0 ? ((totalGamesWon / totalGames) * 100).toFixed(1) : 0;
+      const totalGames = gameResults.length;
+      const wins = gameResults.filter(r => r.rank === 1).length;
+      const losses = totalGames - wins;
+      const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : "0.0";
+      const paidPlaces = gameResults.filter(r => r.rank <= r.game.placesPaid).length;
+      const avgPlacement = totalGames > 0
+        ? (gameResults.reduce((sum, r) => sum + r.rank, 0) / totalGames).toFixed(2)
+        : null;
+      const netResult = gameResults.reduce((sum, r) => sum + (r.prize - r.game.buyIn), 0);
 
-      // Games hosted
-      const gamesHosted = await db.Game.count({
-        where: { hostId: user.id }
-      });
+      let bestStreak = 0, currentStreak = 0;
+      for (const r of gameResults) {
+        if (r.rank === 1) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak); }
+        else { currentStreak = 0; }
+      }
+
+      const gamesHosted = await db.Game.count({ where: { hostId: user.id } });
 
       const { Friends, FriendOf, ...userFields } = user.get({ plain: true });
 
@@ -154,9 +163,14 @@ const userController = {
           ...userFields,
           stats: {
             totalGames,
-            totalGamesWon,
+            wins,
+            losses,
             winRate,
-            gamesHosted
+            paidPlaces,
+            avgPlacement,
+            netResult,
+            bestStreak,
+            gamesHosted,
           },
           friends: allFriends,
         }

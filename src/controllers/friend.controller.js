@@ -65,7 +65,7 @@ const friendController = {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
             const invites = await db.Friend.findAll({
                 where: { friendId: req.user.id, status: "pending" },
-                include: [{ model: db.User, as: "User", attributes: ["id", "username", "email"] }],
+                include: [{ model: db.User, as: "User", attributes: ["id", "username", "email", "avatar"] }],
             });
             res.status(200).json({ invites });
         } catch (error) {

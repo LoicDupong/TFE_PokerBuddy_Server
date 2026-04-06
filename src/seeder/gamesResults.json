@@ -11,19 +11,19 @@
   { "game": "Sunday Deepstack", "user": "GrinderJoe", "rank": 5, "prize": 0 },
   { "game": "Sunday Deepstack", "user": "LuckyLuke", "rank": 6, "prize": 0 },
 
-  { "game": "Midweek Madness", "user": "AceHigh", "rank": 1, "prize": 0 },
-  { "game": "Midweek Madness", "user": "RiverQueen", "rank": 2, "prize": 0 },
+  { "game": "Midweek Madness", "user": "AceHigh", "rank": 1, "prize": 105 },
+  { "game": "Midweek Madness", "user": "RiverQueen", "rank": 2, "prize": 45 },
   { "game": "Midweek Madness", "user": "ChipMonster", "rank": 3, "prize": 0 },
   { "game": "Midweek Madness", "user": "TiltKing", "rank": 4, "prize": 0 },
 
-  { "game": "Turbo Tuesday", "user": "LuckyLuke", "rank": 1, "prize": 0 },
+  { "game": "Turbo Tuesday", "user": "LuckyLuke", "rank": 1, "prize": 50 },
   { "game": "Turbo Tuesday", "user": "CalmCall", "rank": 2, "prize": 0 },
 
-  { "game": "High Roller Night", "user": "AceHigh", "rank": 1, "prize": 0 },
-  { "game": "High Roller Night", "user": "LuckyLuke", "rank": 2, "prize": 0 },
-  { "game": "High Roller Night", "user": "RiverQueen", "rank": 3, "prize": 0 },
+  { "game": "High Roller Night", "user": "AceHigh", "rank": 1, "prize": 500 },
+  { "game": "High Roller Night", "user": "LuckyLuke", "rank": 2, "prize": 300 },
+  { "game": "High Roller Night", "user": "RiverQueen", "rank": 3, "prize": 200 },
 
-  { "game": "Casual Friday", "user": "SilentSam", "rank": 1, "prize": 0 },
-  { "game": "Casual Friday", "user": "BluffMaster", "rank": 2, "prize": 0 },
+  { "game": "Casual Friday", "user": "SilentSam", "rank": 1, "prize": 70 },
+  { "game": "Casual Friday", "user": "BluffMaster", "rank": 2, "prize": 30 },
   { "game": "Casual Friday", "user": "AllInAndy", "rank": 3, "prize": 0 }
 ]

@@ -6,6 +6,7 @@ import inviteRouter from "./invite.route.js";
 import resultsRouter from "./results.route.js";
 import friendRouter from "./friend.route.js";
 import notificationRouter from "./notification.route.js";
+import leaderboardRouter from "./leaderboard.route.js";
 
 export const apiRouter = Router();
 
@@ -16,3 +17,4 @@ apiRouter.use("/games", inviteRouter);
 apiRouter.use("/games", resultsRouter);
 apiRouter.use("/friends", friendRouter);
 apiRouter.use("/notifications", notificationRouter);
+apiRouter.use("/leaderboard", leaderboardRouter);

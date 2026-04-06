@@ -84,7 +84,7 @@
         "percent": 30
       }
     ],
-    "status": "active",
+    "status": "finished",
     "placesPaid": 2,
     "allowRebuys": false,
     "enableBlindTimer": true,
@@ -111,7 +111,7 @@
         "percent": 100
       }
     ],
-    "status": "pending",
+    "status": "finished",
     "placesPaid": 1,
     "allowRebuys": false,
     "enableBlindTimer": false,
@@ -146,7 +146,7 @@
         "percent": 20
       }
     ],
-    "status": "pending",
+    "status": "finished",
     "placesPaid": 3,
     "allowRebuys": true,
     "enableBlindTimer": true,
@@ -177,7 +177,7 @@
         "percent": 30
       }
     ],
-    "status": "pending",
+    "status": "finished",
     "placesPaid": 2,
     "allowRebuys": false,
     "enableBlindTimer": false,
