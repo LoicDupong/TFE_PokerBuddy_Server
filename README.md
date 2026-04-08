@@ -1,80 +1,137 @@
-# PokerBuddy ♠️  
+# PokerBuddy ♠️
 **Home poker nights, made simple.**
 
-PokerBuddy is a web application designed to help players **organize, run, and track home poker sessions**.  
-It centralizes everything needed before, during, and after a game night — from session creation to in-game tools and long-term statistics.
+PokerBuddy is a full-stack web application designed to help players **organize, run, and track home poker sessions**.  
+It centralizes everything needed before, during, and after a game night — from session creation to in-game tools, player stats, and a friends leaderboard.
 
 ---
 
 ## Why PokerBuddy?
 
-Home poker nights are often managed with:
-- scattered WhatsApp messages
-- manual blind timers
-- notes on paper or spreadsheets
+Home poker nights are typically managed with:
+- scattered WhatsApp messages for invites
+- manual blind timers on a phone
+- paper notes or spreadsheets for results
 
 PokerBuddy replaces all of that with **one clean, mobile-first app**.
 
 ---
 
-## Key Features (V1)
+## Features
 
 ### 🗓️ Session management
-- Create and manage poker nights
-- View upcoming and past sessions
-- Track players and results per session
+- Create, edit and manage poker sessions
+- Configure buy-in, blinds, places paid, payout distribution
+- View upcoming, active and past sessions
+- Host-only controls (edit, invite, submit results)
 
-### ⏱️ In-game tools
-- Timer designed for live poker
-- Structured flow adapted to home games
-- Focus on usability during play (mobile-first)
+### 👥 Player invites
+- Invite registered friends or add guests by name
+- Accept / decline game invites
+- Real-time invite status per player (pending / accepted / refused)
 
-### 📊 History & statistics
-- Session history
-- Player results and winnings
-- Win ratio and performance overview
+### ⏱️ Live Game Manager
+- Dedicated in-game screen for the host
+- Blind timer with structured levels
+- Player management during the session
 
-### 📖 Poker rules
-- Centralized rules reference for players
+### 🏆 Results & Statistics
+- Host submits final rankings and prizes at end of game
+- Per-player stats computed from actual game results:
+  - Games played, Wins, Losses, Win rate
+  - Best win streak, Paid places finishes
+  - Average placement, Net result (€)
 
----
+### 📊 Friends Leaderboard
+- Ranks friends by: Net result → Wins → Average placement
+- Compact view on homepage, full paginated view on `/leaderboard`
+- Only shows players in your friends list
 
-## Roadmap
-- **Elo ranking system** to measure player skill over time
-- **Email invitations**
-- **Calendar integration** (event invites / ICS)
+### 🤝 Friends system
+- Search users by username
+- Send, accept, decline friend requests
+- Remove friends
+- In-app friend invite notifications
+
+### 🔔 Notifications
+- In-app notifications for: game results, friend requests, game invites
+
+### 👤 Profile
+- Avatar upload, username, bio
+- Public profile page per user
+- Friends list with avatars
+
+### 📖 Learn
+- Poker rules reference
+- Hand rankings
+- Strategy basics
+- Glossary
 
 ---
 
 ## Tech Stack
 
-- **Frontend:** Next.js (App Router)
-- **Styling:** SCSS / Sass (no Tailwind)
-- **Backend:** Express.js
-- **Database:** PostgreSQL + Sequelize
-- **Auth:** JWT
-- **Approach:** mobile-first, front-first
+### Frontend
+- **Next.js 15** (App Router, Turbopack)
+- **React 19**
+- **SCSS / Sass** — no Tailwind, custom design system
+- **Zustand** — global state (auth, notifications, toasts)
+- **Axios** — API client
+- **FontAwesome** — icons
+- **PWA** — installable, push notification support
+
+### Backend
+- **Express.js 5**
+- **PostgreSQL** + **Sequelize 6** ORM
+- **JWT** — authentication
+- **Argon2** — password hashing
+- **Multer** — avatar file uploads
+- **Node.js ESM** (native `import/export`)
 
 ---
+
+## Project Structure
+
+```
+TFE/
+├── TFE_PokerBuddy_Client/   # Next.js frontend
+│   └── src/
+│       ├── app/             # Pages (App Router)
+│       ├── components/      # Reusable UI components
+│       ├── features/        # Feature-scoped components (modals, forms)
+│       ├── services/        # API service layer (axios)
+│       ├── stores/          # Zustand stores
+│       └── ui/              # Layout components (header, footer, navbar)
+│
+└── TFE_PokerBuddy_Server/   # Express.js API
+    └── src/
+        ├── controllers/     # Route handlers
+        ├── middlewares/     # Auth, upload
+        ├── models/          # Sequelize models
+        ├── routers/         # Express routers
+        ├── seeder/          # Dev seed data
+        └── utils/           # Shared utilities
+```
+
+---
+
 
 ## Project Context
 
 PokerBuddy is a **Final Project (TFE)** developed as part of a **Full-Stack JavaScript training**.  
-The goal was to deliver a **complete, usable V1** within a limited timeframe, focusing on:
-- clean architecture
-- real-world features
-- maintainability and scalability
+The goal was to deliver a **complete, usable product** within a limited timeframe, with a focus on:
+- real-world features and usability
+- clean REST API design
+- mobile-first responsive UI
+- maintainable codebase
 
 ---
 
 ## Status
-✅ V1 completed  
-🚧 Advanced features in progress (Elo, invitations, calendar)
 
----
-
-## Installation (local)
-
-```bash
-npm install
-npm run dev
+✅ Core features complete and stable  
+✅ Stats & leaderboard system live  
+✅ Friends system with notifications  
+✅ Avatar system  
+✅ Toast feedback system (no more browser `alert()`)  
+🚧 PWA push notifications (infrastructure ready, UX in progress)
