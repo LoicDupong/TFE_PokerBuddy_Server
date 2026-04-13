@@ -381,8 +381,9 @@ const gameController = {
             }
 
             await game.update(fieldsToUpdate);
+            await updateGameStatus(game);
 
-            res.status(200).json({ message: "Game updated", fieldsToUpdate });
+            res.status(200).json({ message: "Game updated", game });
 
         } catch (error) {
             console.error("Update game error:", error);
