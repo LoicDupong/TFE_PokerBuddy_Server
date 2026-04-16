@@ -417,7 +417,6 @@ const gameController = {
 
     getGameIcs: async (req, res) => {
         try {
-            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
             const game = await db.Game.findByPk(req.params.id, {
                 attributes: ["id", "name", "dateStart", "location", "description"],

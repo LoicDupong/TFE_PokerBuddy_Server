@@ -44,21 +44,43 @@ const resultsController = {
 
             // 🔹 Enregistrer les nouveaux résultats
             const createdResults = [];
+            let rank = 1;
             for (const r of results) {
                 const player = game.playerLinks.find(p => p.id === r.gamePlayerId);
-                if (!player) {
-                    await t.rollback();
-                    return res.status(400).json({ error: `Invalid gamePlayerId: ${r.gamePlayerId}` });
+
+                let resolvedGamePlayerId;
+                if (player) {
+                    resolvedGamePlayerId = player.id;
+                } else {
+                    // Unknown ID — walk-in player added in the manager, not in the original invite list
+                    const name = r.guestName?.trim().replace(/\s+/g, " ");
+                    if (!name) {
+                        console.warn(`createResults: unknown gamePlayerId ${r.gamePlayerId} with no guestName, skipping`);
+                        continue;
+                    }
+
+                    // Find-or-create to handle duplicate names safely
+                    const [walkin] = await db.GamePlayer.findOrCreate({
+                        where: { gameId: game.id, guestName: name },
+                        defaults: { gameId: game.id, guestName: name, status: "accepted" },
+                        transaction: t,
+                    });
+                    resolvedGamePlayerId = walkin.id;
                 }
 
                 const result = await db.GameResult.create({
                     gameId: game.id,
-                    gamePlayerId: r.gamePlayerId,
-                    rank: r.rank,
+                    gamePlayerId: resolvedGamePlayerId,
+                    rank: rank++,
                     prize: r.prize ?? 0
                 }, { transaction: t });
 
                 createdResults.push(result);
+            }
+
+            if (createdResults.length === 0) {
+                await t.rollback();
+                return res.status(400).json({ error: "No valid players found in results. Make sure players were invited through the game." });
             }
 
             // 🔹 Trier avant de renvoyer

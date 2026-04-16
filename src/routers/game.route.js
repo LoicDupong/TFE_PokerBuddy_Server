@@ -12,7 +12,7 @@ gameRouter
 
 gameRouter
     .route('/:id/ics')
-    .get(authorizeMiddleware(), gameController.getGameIcs);
+    .get(gameController.getGameIcs);
 
 gameRouter
     .route('/:id')
