@@ -9,7 +9,7 @@ It centralizes everything needed before, during, and after a game night — from
 ## Why PokerBuddy?
 
 Home poker nights are typically managed with:
-- scattered WhatsApp messages for invites
+- scattered Social Networks messages for invites
 - manual blind timers on a phone
 - paper notes or spreadsheets for results
 
