@@ -15,6 +15,11 @@ gameRouter
     .get(gameController.getGameIcs);
 
 gameRouter
+    .route('/:id/invite-code')
+    .post(authorizeMiddleware(), gameController.generateInviteCode)
+    .delete(authorizeMiddleware(), gameController.disableInviteCode);
+
+gameRouter
     .route('/:id')
     .get(authorizeMiddleware(), gameController.getGameById)
     .patch(authorizeMiddleware(), gameController.updateGame)

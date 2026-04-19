@@ -1,4 +1,5 @@
 import { Op, or } from "sequelize";
+import { randomUUID } from "crypto";
 import db from "../models/index.js";
 import { updateGameStatus } from "../utils/gameStatus.utils.js";
 
@@ -451,6 +452,40 @@ const gameController = {
         } catch (error) {
             console.error("getGameIcs error:", error);
             return res.status(500).json({ error: "Error generating calendar file" });
+        }
+    },
+
+    generateInviteCode: async (req, res) => {
+        try {
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+            const { id } = req.params;
+            const game = await db.Game.findByPk(id);
+            if (!game) return res.status(404).json({ error: "Game not found" });
+            if (game.hostId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+            if (game.status === "finished") return res.status(400).json({ error: "Cannot create invite link for a finished game" });
+
+            const inviteCode = randomUUID();
+            await game.update({ inviteCode });
+            return res.status(200).json({ inviteCode });
+        } catch (error) {
+            console.error("generateInviteCode error:", error);
+            return res.status(500).json({ error: "Error generating invite link" });
+        }
+    },
+
+    disableInviteCode: async (req, res) => {
+        try {
+            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+            const { id } = req.params;
+            const game = await db.Game.findByPk(id);
+            if (!game) return res.status(404).json({ error: "Game not found" });
+            if (game.hostId !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+
+            await game.update({ inviteCode: null });
+            return res.status(200).json({ message: "Invite link disabled" });
+        } catch (error) {
+            console.error("disableInviteCode error:", error);
+            return res.status(500).json({ error: "Error disabling invite link" });
         }
     },
 
