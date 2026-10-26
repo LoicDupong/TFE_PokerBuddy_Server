@@ -89,10 +89,24 @@ const resultsController = {
             // 🔹 Trier avant de renvoyer
             createdResults.sort((a, b) => a.rank - b.rank);
 
+            // 🔹 Répartition réellement distribuée : le manager a pu changer celle prévue à la création
+            // (les stats "places payées" lisent placesPaid)
+            const paid = createdResults.filter(r => r.prize > 0);
+            const totalPaid = paid.reduce((sum, r) => sum + r.prize, 0);
+            const payoutFields = totalPaid > 0 ? {
+                placesPaid: paid.length,
+                prizePool: totalPaid,
+                payoutDistribution: paid.map(r => ({
+                    place: r.rank,
+                    percent: Math.round((r.prize / totalPaid) * 10000) / 100,
+                })),
+            } : {};
+
             // 🔹 Terminer la game
             await game.update({
                 status: "finished",
                 dateEnd: finishedAt ? new Date(finishedAt) : new Date(),
+                ...payoutFields,
             }, { transaction: t });
 
             await t.commit();
