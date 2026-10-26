@@ -36,6 +36,7 @@ const joinController = {
             await db.GamePlayer.create({
                 gameId: game.id,
                 userId: req.user.id,
+                userName: req.user.username,
                 status: "accepted",
             });
 

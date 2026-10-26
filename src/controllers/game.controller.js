@@ -1,15 +1,20 @@
-import { Op, or } from "sequelize";
+import { Op } from "sequelize";
 import { randomUUID } from "crypto";
 import db from "../models/index.js";
 import { updateGameStatus } from "../utils/gameStatus.utils.js";
+import { createNotification } from "../utils/notification.utils.js";
 
+// Les checkboxes arrivent en booléens (validés par zod côté client) ou en "on" (FormData brut)
+const toBoolean = (value) => value === true || value === "on" || value === "true";
 
 const gameController = {
     createGame: async (req, res) => {
-        const t = await db.sequelize.transaction();
-        try {
-            if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+        if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
+        // Ouverte seulement après les validations : un return anticipé ne doit jamais laisser
+        // une transaction (et sa connexion du pool) ouverte
+        let t;
+        try {
             let {
                 name,
                 dateStart,
@@ -70,64 +75,71 @@ const gameController = {
                 bigBlind: Number(bigBlind),
                 smallBlind: Number(smallBlind),
                 levelDuration: Number(levelDuration) || 15,
-                enableBlindTimer: enableBlindTimer === "on",
-                allowRebuys: allowRebuys === "on",
+                enableBlindTimer: toBoolean(enableBlindTimer),
+                allowRebuys: toBoolean(allowRebuys),
                 maxPlayers: maxPlayers ? Number(maxPlayers) : null,
                 currency: currency || "EUR",
                 payoutDistribution: parsedPayout,
                 hostId: req.user.id,
             };
 
+            const parsedInvites = invites
+                ? (typeof invites === "string" ? JSON.parse(invites) : invites)
+                : {};
+            // L'hôte a déjà sa ligne de joueur, on ne l'invite pas une 2e fois
+            const invitedFriends = (parsedInvites.friends ?? []).filter((f) => f.id !== req.user.id);
+
+            t = await db.sequelize.transaction();
+
             // ✅ Création du Game
             const newGame = await db.Game.create(payload, { transaction: t });
 
-            // ✅ Gestion des invites
-            if (invites) {
-                const parsedInvites =
-                    typeof invites === "string" ? JSON.parse(invites) : invites;
+            // ✅ Gestion des joueurs
+            // L'hôte joue aussi : sa ligne GamePlayer fait compter ses résultats dans ses stats
+            const gamePlayers = [{
+                gameId: newGame.id,
+                userId: req.user.id,
+                userName: req.user.username,
+                status: "accepted",
+            }];
 
-                const gamePlayers = [];
-
-                if (parsedInvites.friends?.length) {
-                    for (const f of parsedInvites.friends) {
-                        gamePlayers.push({
-                            gameId: newGame.id,
-                            userId: f.id,
-                            userName: f.name,
-                            status: "pending",
-                        });
-                    }
-                }
-
-                if (parsedInvites.guests?.length) {
-                    for (const g of parsedInvites.guests) {
-                        gamePlayers.push({
-                            gameId: newGame.id,
-                            guestName: g,
-                            status: "pending",
-                        });
-                    }
-                }
-
-                if (parsedInvites.emails?.length) {
-                    for (const e of parsedInvites.emails) {
-                        gamePlayers.push({
-                            gameId: newGame.id,
-                            guestName: e,
-                            status: "pending",
-                        });
-                    }
-                }
-
-                if (gamePlayers.length) {
-                    await db.GamePlayer.bulkCreate(gamePlayers, { transaction: t });
-                }
+            for (const f of invitedFriends) {
+                gamePlayers.push({
+                    gameId: newGame.id,
+                    userId: f.id,
+                    userName: f.name,
+                    status: "pending",
+                });
             }
 
+            for (const g of parsedInvites.guests ?? []) {
+                gamePlayers.push({
+                    gameId: newGame.id,
+                    guestName: g,
+                    status: "pending",
+                });
+            }
+
+            for (const e of parsedInvites.emails ?? []) {
+                gamePlayers.push({
+                    gameId: newGame.id,
+                    guestName: e,
+                    status: "pending",
+                });
+            }
+
+            await db.GamePlayer.bulkCreate(gamePlayers, { transaction: t });
+
             await t.commit();
+
+            // Non-blocking notifications — after commit, like invitePlayer does
+            await Promise.all(invitedFriends.map((f) =>
+                createNotification(f.id, 'game_invite', `You were invited to "${newGame.name}"`, newGame.id)
+            ));
+
             res.status(201).json({ game: newGame });
         } catch (error) {
-            await t.rollback();
+            if (t && !t.finished) await t.rollback();
             console.error("❌ CreateGame error");
             console.error("Message:", error.message);
             console.error("Stack:", error.stack);
@@ -357,8 +369,8 @@ const gameController = {
             if (bigBlind !== undefined) fieldsToUpdate.bigBlind = bigBlind;
             if (smallBlind !== undefined) fieldsToUpdate.smallBlind = smallBlind;
             if (levelDuration !== undefined) fieldsToUpdate.levelDuration = levelDuration;
-            if (enableBlindTimer !== undefined) fieldsToUpdate.enableBlindTimer = enableBlindTimer;
-            if (allowRebuys !== undefined) fieldsToUpdate.allowRebuys = allowRebuys;
+            if (enableBlindTimer !== undefined) fieldsToUpdate.enableBlindTimer = toBoolean(enableBlindTimer);
+            if (allowRebuys !== undefined) fieldsToUpdate.allowRebuys = toBoolean(allowRebuys);
 
             // 🔹 Handle realStart (HH:mm → full datetime)
             if (realStart && dateStart) {

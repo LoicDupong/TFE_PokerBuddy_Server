@@ -96,7 +96,7 @@ const resultsController = {
 
             // Non-blocking notifications — must be after commit so game.id is stable
             const notifyPromises = game.playerLinks
-                .filter(p => p.userId)
+                .filter(p => p.userId && p.userId !== game.hostId)
                 .map(p => createNotification(p.userId, 'game_result', `Results for "${game.name}" are in`, game.id));
             await Promise.all(notifyPromises);
 

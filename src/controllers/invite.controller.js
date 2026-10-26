@@ -35,7 +35,7 @@ const inviteController = {
                     return res.status(400).json({ error: "User already invited" });
                 }
 
-                const invited = await db.GamePlayer.create({ gameId, userId, status: "pending" });
+                const invited = await db.GamePlayer.create({ gameId, userId, userName: existingUser.username, status: "pending" });
                 await createNotification(userId, 'game_invite', `You were invited to "${game.name}"`, game.id);
                 return res.status(201).json({ message: "User invited", invited });
             }
