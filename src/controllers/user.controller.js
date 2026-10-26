@@ -2,18 +2,6 @@ import { Op } from "sequelize";
 import db from "../models/index.js"; // Sequelize models
 
 const userController = {
-  //* Dev purposes
-  getAllUsers: async (req, res) => {
-    try {
-
-      const users = await db.User.findAll({
-        attributes: ["id", "username", "email", "password", "avatar", "description"],
-      });
-      res.status(200).json({ users });
-    } catch (error) {
-      res.status(500).json({ error: "Error fetching users" });
-    }
-  },
   getUser: async (req, res) => {
     try {
       const { id } = req.params;

@@ -1,0 +1,9 @@
+node_modules/
+
+# Env files (secrets) — only the example is versioned
+.env
+.env.*
+!.env.example
+
+# Avatars uploaded while developing locally
+uploads/avatars/*

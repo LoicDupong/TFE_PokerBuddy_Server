@@ -5,6 +5,12 @@ import gamesResultsJSON from './gamesResults.json' with { type: 'json' };
 import friendsJSON from './friends.json' with { type: 'json' };
 import argon2 from "argon2";
 
+// sync({ force: true }) supprime toutes les tables : uniquement sur une base de dev
+if (process.env.NODE_ENV !== "dev") {
+    console.error(`❌ Seed refused: NODE_ENV is "${process.env.NODE_ENV}", expected "dev". Run it with "npm run seed" (uses .env.local).`);
+    process.exit(1);
+}
+
 try {
     await db.sequelize.authenticate();
     console.log('Connection has been established successfully.');

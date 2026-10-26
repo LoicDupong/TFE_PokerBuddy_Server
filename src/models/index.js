@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { Sequelize } from "sequelize";
 import userModel from "./user.model.js";
 import gameModel from "./game.model.js";
@@ -8,11 +7,18 @@ import gamePlayersModel from './gamePlayers.model.js';
 import notificationModel from './notification.model.js';
 
 // Récupération des variables d'env
-const { DATABASE_URL } = process.env;
+// Chargées par les scripts npm (--env-file), jamais implicitement :
+// sinon le dev retombe sur la DATABASE_URL de prod du fichier .env
+const { DATABASE_URL, DB_SSL } = process.env;
+
+if (!DATABASE_URL) {
+  throw new Error("DATABASE_URL is missing: add it to the env file used by your npm script (.env.local in dev)");
+}
 
 const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',
-  dialectOptions: {
+  // DB_SSL=false pour une base Postgres locale (Docker) sans SSL
+  dialectOptions: DB_SSL === 'false' ? {} : {
     ssl: {
       require: true,
       rejectUnauthorized: false, // ⚠️ obligatoire pour Neon

@@ -31,7 +31,8 @@ app.use("/api", authMiddleware(), apiRouter);
 
 // Start
 const PORT = process.env.PORT || 8080;
-const NODE_ENV = process.env.NODE_ENV || "dev";
+// Pas de fallback "dev" : sync({ alter }) ne doit tourner que si on le demande explicitement
+const NODE_ENV = process.env.NODE_ENV || "production";
 
 if (NODE_ENV === "dev") {
   await db.sequelize.sync({ alter: true });
