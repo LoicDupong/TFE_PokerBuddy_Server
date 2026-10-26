@@ -1,0 +1,19 @@
+# Base Postgres locale pour le dev — jamais la base de prod
+# Démarrer : docker compose up -d   |   Arrêter : docker compose stop
+# .env.local : DATABASE_URL=postgres://pokerbuddy:pokerbuddy@localhost:5433/pokerbuddy et DB_SSL=false
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pokerbuddy-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pokerbuddy
+      POSTGRES_PASSWORD: pokerbuddy
+      POSTGRES_DB: pokerbuddy
+    ports:
+      - "5433:5432" # 5433 : évite le conflit avec d'autres Postgres locaux sur 5432
+    volumes:
+      - pokerbuddy-dev-data:/var/lib/postgresql/data
+
+volumes:
+  pokerbuddy-dev-data:
