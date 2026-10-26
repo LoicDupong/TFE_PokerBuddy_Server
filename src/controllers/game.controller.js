@@ -7,6 +7,37 @@ import { createNotification } from "../utils/notification.utils.js";
 // Les checkboxes arrivent en booléens (validés par zod côté client) ou en "on" (FormData brut)
 const toBoolean = (value) => value === true || value === "on" || value === "true";
 
+// realStart arrive en ISO, calculé par le client dans le fuseau de l'utilisateur.
+// L'ancien format "HH:mm" (front pas encore mis à jour) est combiné avec dateStart dans le fuseau
+// du serveur, comme avant. Vide → null (permet d'effacer l'heure).
+const parseRealStart = (realStart, dateStart) => {
+    if (!realStart) return null;
+    if (/^\d{1,2}:\d{2}$/.test(realStart)) {
+        if (!dateStart) return null;
+        const combined = new Date(dateStart);
+        const [hours, minutes] = realStart.split(":");
+        combined.setHours(hours, minutes, 0, 0);
+        return combined.toISOString();
+    }
+    const date = new Date(realStart);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+// Bornes du jour de l'utilisateur (minuit local → minuit local du lendemain), envoyées par le client.
+// À défaut : minuit dans le fuseau du serveur (UTC sur Render, donc décalé pour la Belgique).
+const getDayBounds = ({ dayStart, dayEnd }) => {
+    const startOfDay = new Date(dayStart);
+    const startOfTomorrow = new Date(dayEnd);
+    if (!Number.isNaN(startOfDay.getTime()) && !Number.isNaN(startOfTomorrow.getTime()) && startOfTomorrow > startOfDay) {
+        return { startOfDay, startOfTomorrow };
+    }
+    const fallbackStart = new Date();
+    fallbackStart.setHours(0, 0, 0, 0);
+    const fallbackTomorrow = new Date(fallbackStart);
+    fallbackTomorrow.setDate(fallbackTomorrow.getDate() + 1);
+    return { startOfDay: fallbackStart, startOfTomorrow: fallbackTomorrow };
+};
+
 const gameController = {
     createGame: async (req, res) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -54,19 +85,10 @@ const gameController = {
                 }
             }
 
-            // ✅ Combine dateStart + realStart
-            let realStartDate = null;
-            if (realStart && dateStart) {
-                const combinedDate = new Date(dateStart);
-                const [hours, minutes] = realStart.split(":");
-                combinedDate.setHours(hours, minutes, 0, 0);
-                realStartDate = combinedDate.toISOString();
-            }
-
             const payload = {
                 name,
                 dateStart,
-                realStart: realStartDate,
+                realStart: parseRealStart(realStart, dateStart),
                 location,
                 buyIn: Number(buyIn),
                 prizePool: Number(prizePool),
@@ -157,48 +179,45 @@ const gameController = {
         try {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-            let order = [["dateStart", "DESC"]];
-            let where = {
+            // Parties de l'utilisateur : hôte, ou joueur via une sous-requête. Filtrer sur
+            // "$playerLinks.userId$" tronquait la liste des joueurs renvoyée à sa seule ligne.
+            const myGames = (playerStatusCondition) => ({
                 [Op.or]: [
-                    { hostId: req.user.id },                // si user est host
-                    { "$playerLinks.userId$": req.user.id } // si user est joueur
-                ]
-            };
+                    { hostId: req.user.id },
+                    {
+                        id: {
+                            [Op.in]: db.sequelize.literal(
+                                `(SELECT "gameId" FROM game_players WHERE "userId" = ${db.sequelize.escape(req.user.id)} AND ${playerStatusCondition})`
+                            ),
+                        },
+                    },
+                ],
+            });
+
+            let order = [["dateStart", "DESC"]];
+            // Une partie dont on a refusé l'invitation n'apparaît pas dans ses listes
+            let where = myGames(`status <> 'refused'`);
 
             const now = new Date();
+            const { startOfDay, startOfTomorrow } = getDayBounds(req.query);
 
             if (req.query.filter === "upcoming") {
-                const startOfTomorrow = new Date(now);
-                startOfTomorrow.setHours(0, 0, 0, 0);
-                startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
                 // Overwrite base where: host always sees their game; players only if they accepted
                 where = {
-                    [Op.or]: [
-                        { hostId: req.user.id },
-                        {
-                            "$playerLinks.userId$": req.user.id,
-                            "$playerLinks.status$": "accepted",
-                        },
-                    ],
+                    ...myGames(`status = 'accepted'`),
                     dateStart: { [Op.gte]: startOfTomorrow },
                     status: "pending",
                 };
                 order = [["dateStart", "ASC"]];
             } else if (req.query.filter === "today") {
-                const startOfDay = new Date(now);
-                startOfDay.setHours(0, 0, 0, 0);
-                const endOfDay = new Date(now);
-                endOfDay.setHours(23, 59, 59, 999);
-                where.dateStart = { [Op.between]: [startOfDay, endOfDay] };
+                where.dateStart = { [Op.gte]: startOfDay, [Op.lt]: startOfTomorrow };
                 where.status = { [Op.ne]: "finished" };
                 order = [["dateStart", "ASC"]];
             } else if (req.query.filter === "finished") {
-                const startOfToday = new Date(now);
-                startOfToday.setHours(0, 0, 0, 0);
                 where[Op.and] = [
                     {
                         [Op.or]: [
-                            { dateStart: { [Op.lt]: startOfToday } },
+                            { dateStart: { [Op.lt]: startOfDay } },
                             { status: "finished" }
                         ]
                     }
@@ -372,12 +391,9 @@ const gameController = {
             if (enableBlindTimer !== undefined) fieldsToUpdate.enableBlindTimer = toBoolean(enableBlindTimer);
             if (allowRebuys !== undefined) fieldsToUpdate.allowRebuys = toBoolean(allowRebuys);
 
-            // 🔹 Handle realStart (HH:mm → full datetime)
-            if (realStart && dateStart) {
-                const combinedDate = new Date(dateStart);
-                const [hours, minutes] = realStart.split(":");
-                combinedDate.setHours(hours, minutes, 0, 0);
-                fieldsToUpdate.realStart = combinedDate.toISOString();
+            // 🔹 Handle realStart (ISO, ancien "HH:mm", ou null pour l'effacer)
+            if (realStart !== undefined) {
+                fieldsToUpdate.realStart = parseRealStart(realStart, dateStart ?? game.dateStart);
             }
 
             // 🔹 Handle payoutDistribution
@@ -439,8 +455,9 @@ const gameController = {
             const start = new Date(game.dateStart);
             const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
 
-            const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0];
-            const escape = (str) => (str || "").replace(/[,;\\]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
+            // Le "Z" final marque l'heure comme UTC ; sans lui les agendas la lisent en heure locale
+            const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+            const escape = (str) => (str || "").replace(/[,;\\]/g, (c) => `\\${c}`).replace(/\r?\n/g, "\\n");
 
             const lines = [
                 "BEGIN:VCALENDAR",
