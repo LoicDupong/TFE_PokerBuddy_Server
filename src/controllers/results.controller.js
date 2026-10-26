@@ -27,10 +27,12 @@ const resultsController = {
                 return res.status(403).json({ error: "Only the host can submit results" });
             }
 
-            // Vérif statut
-            if (game.status === "finished") {
+            // Vérif statut : une partie "finished" sans résultats (ancien passage auto après 24 h)
+            // peut encore recevoir ses résultats
+            const existingResults = await db.GameResult.count({ where: { gameId: game.id } });
+            if (game.status === "finished" && existingResults > 0) {
                 await t.rollback();
-                return res.status(400).json({ error: "Game already finished" });
+                return res.status(400).json({ error: "Results already submitted for this game" });
             }
 
             // Vérif données envoyées

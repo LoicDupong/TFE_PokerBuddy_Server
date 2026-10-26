@@ -8,9 +8,9 @@ export async function updateGameStatus(game) {
     } else if (game.status === 'active' && startTime > now) {
         // dateStart was moved to the future after the game was marked active
         await game.update({ status: 'pending' });
-    } else if (game.status === 'active' && now >= startTime + 24 * 60 * 60 * 1000) {
-        await game.update({ status: 'finished', dateEnd: new Date() });
     }
+    // Pas de passage automatique à "finished" : seule la saisie des résultats termine une partie,
+    // sinon l'hôte ne peut plus les encoder (le rappel de notification reste actif jusque-là)
 
     return game;
 }

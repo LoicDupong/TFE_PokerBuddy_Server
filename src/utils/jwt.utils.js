@@ -14,7 +14,8 @@ export function generateToken({ id, username }) {
         //? La configuration du token
         const option = {
             algorithm: 'HS512',
-            expiresIn: '3h', // vercel/ms
+            // 7 jours, renouvelé à chaque ouverture de l'app via /auth/me (une soirée poker dépasse souvent 3 h)
+            expiresIn: '7d', // vercel/ms
             issuer: process.env.JWT_ISSUER,
             audience: process.env.JWT_AUDIENCE
         };

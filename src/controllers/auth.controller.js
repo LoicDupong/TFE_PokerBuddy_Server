@@ -76,7 +76,10 @@ const authController = {
 
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        res.status(200).json({ user: user.get({ plain: true }) });
+        // Token renouvelé : la session glisse tant que l'utilisateur revient avant l'expiration
+        const token = await generateToken(user);
+
+        res.status(200).json({ user: user.get({ plain: true }), token });
     },
 
     updatePassword: async (req, res) => {
