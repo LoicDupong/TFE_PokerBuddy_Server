@@ -1,5 +1,9 @@
 import { Op } from "sequelize";
+import argon2 from "argon2";
+import { randomUUID } from "crypto";
 import db from "../models/index.js"; // Sequelize models
+import { generateToken } from "../utils/jwt.utils.js";
+import { findUserByUsername, validateUsername } from "../utils/validation.utils.js";
 
 const userController = {
   getUser: async (req, res) => {
@@ -84,13 +88,13 @@ const userController = {
           {
             model: db.User,
             as: "Friends",
-            attributes: ["id", "username", "email", "avatar"],
+            attributes: ["id", "username", "avatar"],
             through: { attributes: ["status", "createdAt"], where: { status: "accepted" } },
           },
           {
             model: db.User,
             as: "FriendOf",
-            attributes: ["id", "username", "email", "avatar"],
+            attributes: ["id", "username", "avatar"],
             through: { attributes: ["status", "createdAt"], where: { status: "accepted" } },
           },
         ]
@@ -175,7 +179,7 @@ const userController = {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { username, avatar, description } = req.body;
+      const { username, description } = req.body;
       const user = await db.User.findByPk(req.user.id);
 
       if (!user) {
@@ -184,14 +188,28 @@ const userController = {
 
       // On construit un objet avec uniquement les champs fournis
       const fieldsToUpdate = {};
-      if (username) fieldsToUpdate.username = username;
-      if (description) fieldsToUpdate.description = description;
 
-      // Gestion de l’avatar : priorité au fichier uploadé
+      if (username !== undefined && username !== user.username) {
+        const usernameError = validateUsername(username);
+        if (usernameError) return res.status(400).json({ error: usernameError });
+
+        const taken = await findUserByUsername(username);
+        if (taken && taken.id !== user.id) {
+          return res.status(409).json({ error: "Username already taken" });
+        }
+        fieldsToUpdate.username = username;
+      }
+
+      // Bio vide → effacée
+      if (description !== undefined) {
+        const bio = String(description).trim();
+        if (bio.length > 500) return res.status(400).json({ error: "Bio too long (500 characters max)" });
+        fieldsToUpdate.description = bio || null;
+      }
+
+      // Avatar : uniquement un fichier uploadé (plus d'URL arbitraire envoyée en texte)
       if (req.file) {
         fieldsToUpdate.avatar = `/uploads/avatars/${req.file.filename}`;
-      } else if (avatar) {
-        fieldsToUpdate.avatar = avatar; // si avatar en string (url)
       }
 
       // Si aucun champ fourni → pas d’update
@@ -200,6 +218,9 @@ const userController = {
       }
 
       await user.update(fieldsToUpdate);
+
+      // Nouveau token : il contient le pseudo, utilisé dans les notifications envoyées aux autres
+      const token = await generateToken(user);
 
       return res.status(200).json({
         message: "Profile updated",
@@ -210,6 +231,7 @@ const userController = {
           avatar: user.avatar,
           description: user.description,
         },
+        token,
       });
     } catch (error) {
       console.error("updateMe error:", error);
@@ -228,16 +250,19 @@ const userController = {
 
       if (!user) return res.status(404).json({ error: "User not found" });
 
+      // Anonymisé plutôt que supprimé (ses résultats restent dans les parties des autres).
+      // Pseudo unique par compte (la colonne est unique) et mot de passe aléatoire : connexion impossible
       await user.update({
         email: `deleted_${user.id}@example.com`,
-        username: "Deleted user",
+        username: `deleted_${user.id}`,
+        password: await argon2.hash(randomUUID()),
         avatar: null,
         description: null,
       });
 
       res.status(200).json({ message: "Profile deleted" });
     } catch (error) {
-
+      console.error("deleteMe error:", error);
       res.status(500).json({ error: "Error deleting profile" });
     }
   },
@@ -251,9 +276,13 @@ const userController = {
         return res.status(400).json({ error: "Username is required" });
       }
 
+      // % et _ tapés par l'utilisateur = caractères littéraux, pas des jokers SQL
+      const pattern = username.trim().replace(/[\\%_]/g, "\\$&");
+
       const users = await db.User.findAll({
         where: {
-          username: { [Op.iLike]: `%${username}%` },
+          // Les comptes supprimés (pseudo "deleted_…") n'apparaissent pas
+          username: { [Op.iLike]: `%${pattern}%`, [Op.notILike]: "deleted\\_%" },
           id: { [Op.ne]: req.user.id },
         },
         attributes: ["id", "username", "avatar"], // ce que tu veux exposer

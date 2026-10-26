@@ -1,8 +1,12 @@
 import { Router } from "express";
 import { authorizeMiddleware } from "../middlewares/auth.middleware.js";
 import friendController from "../controllers/friend.controller.js";
+import { uuidParam } from "../middlewares/validate.middleware.js";
 
 const friendRouter = Router();
+
+friendRouter.param("friendId", uuidParam);
+friendRouter.param("inviteId", uuidParam);
 
 // Lister ses amis
 friendRouter.get("/", authorizeMiddleware(), friendController.getFriends);

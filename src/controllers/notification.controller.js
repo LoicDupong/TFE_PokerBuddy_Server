@@ -14,7 +14,10 @@ const notificationController = {
                 limit: 30,
             });
 
-            const unreadCount = notifications.filter(n => !n.read).length;
+            // Compté en base : au-delà des 30 notifications renvoyées, les non lues comptent aussi
+            const unreadCount = await db.Notification.count({
+                where: { userId: req.user.id, read: false },
+            });
 
             return res.status(200).json({ notifications, unreadCount });
         } catch (error) {

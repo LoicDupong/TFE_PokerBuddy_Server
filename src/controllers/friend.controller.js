@@ -1,6 +1,7 @@
 import db from "../models/index.js";
 import { Op } from "sequelize";
 import { createNotification } from "../utils/notification.utils.js";
+import { isUuid } from "../utils/validation.utils.js";
 
 const friendController = {
     // Envoyer une invitation
@@ -10,8 +11,22 @@ const friendController = {
 
             const { friendId } = req.body;
 
+            if (!isUuid(friendId) || !(await db.User.findByPk(friendId, { attributes: ["id"] }))) {
+                return res.status(404).json({ error: "User not found" });
+            }
+
             if (req.user.id === friendId) {
                 return res.status(400).json({ error: "You cannot add yourself as a friend" });
+            }
+
+            // L'autre m'a déjà envoyé une demande : la mienne vaut acceptation
+            const reversePending = await db.Friend.findOne({
+                where: { userId: friendId, friendId: req.user.id, status: "pending" },
+            });
+            if (reversePending) {
+                await reversePending.update({ status: "accepted" });
+                await createNotification(friendId, 'friend_accepted', `${req.user.username} accepted your friend request`, reversePending.id);
+                return res.status(200).json({ message: "Friend request accepted", invite: reversePending });
             }
 
             const existing = await db.Friend.findOne({
@@ -65,7 +80,7 @@ const friendController = {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
             const invites = await db.Friend.findAll({
                 where: { friendId: req.user.id, status: "pending" },
-                include: [{ model: db.User, as: "User", attributes: ["id", "username", "email", "avatar"] }],
+                include: [{ model: db.User, as: "User", attributes: ["id", "username", "avatar"] }],
             });
             res.status(200).json({ invites });
         } catch (error) {
@@ -102,7 +117,7 @@ const friendController = {
                 return res.status(400).json({ error: "Invalid action" });
             }
 
-            res.status(200).json({ message: `Invite ${action}ed`, invite });
+            res.status(200).json({ message: `Invite ${action === "accept" ? "accepted" : "declined"}`, invite });
         } catch (error) {
             console.error("Respond invite error:", error);
             res.status(500).json({ error: "Error responding to invite" });
@@ -123,8 +138,8 @@ const friendController = {
                     ],
                 },
                 include: [
-                    { model: db.User, as: "User", attributes: ["id", "username", "email"] },
-                    { model: db.User, as: "FriendUser", attributes: ["id", "username", "email"] },
+                    { model: db.User, as: "User", attributes: ["id", "username"] },
+                    { model: db.User, as: "FriendUser", attributes: ["id", "username"] },
                 ],
             });
 

@@ -38,6 +38,58 @@ const getDayBounds = ({ dayStart, dayEnd }) => {
     return { startOfDay: fallbackStart, startOfTomorrow: fallbackTomorrow };
 };
 
+const CURRENCIES = ["EUR", "USD", "GBP"];
+
+// Validation serveur des champs d'une partie : le client valide aussi, mais l'API ne doit pas lui faire confiance.
+// partial : modification (seuls les champs envoyés sont vérifiés) ; current : valeurs actuelles de la partie.
+const validateGameFields = (fields, { partial = false, current = {} } = {}) => {
+    const has = (key) => !partial || fields[key] !== undefined;
+    const isWholeNumber = (value, min) =>
+        value !== "" && value !== null && Number.isInteger(Number(value)) && Number(value) >= min;
+
+    if (has("name") && (typeof fields.name !== "string" || !fields.name.trim())) return "Title is required";
+    if (has("location") && (typeof fields.location !== "string" || !fields.location.trim())) return "Location is required";
+    if (has("dateStart") && Number.isNaN(new Date(fields.dateStart ?? "").getTime())) return "A valid date is required";
+    if (has("buyIn") && !isWholeNumber(fields.buyIn, 0)) return "Buy-in must be a positive whole number";
+    if (has("smallBlind") && !isWholeNumber(fields.smallBlind, 1)) return "Small blind must be >= 1";
+    if (has("bigBlind") && !isWholeNumber(fields.bigBlind, 1)) return "Big blind must be >= 1";
+    if (has("placesPaid") && !isWholeNumber(fields.placesPaid, 1)) return "Places paid must be >= 1";
+    if (fields.levelDuration !== undefined && !(isWholeNumber(fields.levelDuration, 1) && Number(fields.levelDuration) <= 120)) {
+        return "Level duration must be between 1 and 120 minutes";
+    }
+    // 0 ou vide = pas de limite de joueurs
+    if (fields.maxPlayers && !isWholeNumber(fields.maxPlayers, 2)) return "Max players must be at least 2";
+    if (fields.currency && !CURRENCIES.includes(fields.currency)) return "Currency must be EUR, USD or GBP";
+    if (fields.description && String(fields.description).length > 500) return "Description too long (500 characters max)";
+
+    const smallBlind = Number(fields.smallBlind ?? current.smallBlind);
+    const bigBlind = Number(fields.bigBlind ?? current.bigBlind);
+    if (bigBlind <= smallBlind) return "Big blind must be greater than small blind";
+
+    return null;
+};
+
+// payoutDistribution : tableau de { place, percent } (ou sa version JSON) dont la somme fait 100 %
+const parsePayout = (payoutDistribution) => {
+    let parsed;
+    try {
+        parsed = typeof payoutDistribution === "string" ? JSON.parse(payoutDistribution) : payoutDistribution;
+    } catch {
+        return { error: "Invalid payout distribution" };
+    }
+    if (!Array.isArray(parsed) || parsed.some((p) => !(Number(p?.percent) >= 0))) {
+        return { error: "Invalid payout distribution" };
+    }
+    const total = parsed.reduce((sum, p) => sum + Number(p.percent), 0);
+    if (Math.abs(total - 100) > 0.01) {
+        return { error: "Payout distribution must sum to 100%" };
+    }
+    return { value: parsed };
+};
+
+// Données publiques d'un utilisateur dans les réponses "partie" : jamais l'email
+const PUBLIC_USER_ATTRIBUTES = ["id", "username"];
+
 const gameController = {
     createGame: async (req, res) => {
         if (!req.user) return res.status(401).json({ error: "Unauthorized" });
@@ -66,23 +118,19 @@ const gameController = {
                 invites,
             } = req.body;
 
+            const validationError = validateGameFields(req.body);
+            if (validationError) {
+                return res.status(400).json({ error: validationError });
+            }
+
             // ✅ PayoutDistribution
             let parsedPayout = null;
             if (payoutDistribution) {
-                parsedPayout =
-                    typeof payoutDistribution === "string"
-                        ? JSON.parse(payoutDistribution)
-                        : payoutDistribution;
-
-                const total = parsedPayout.reduce(
-                    (sum, p) => sum + Number(p.percent),
-                    0
-                );
-                if (Math.abs(total - 100) > 0.01) {
-                    return res
-                        .status(400)
-                        .json({ error: "Payout distribution must sum to 100%" });
+                const payout = parsePayout(payoutDistribution);
+                if (payout.error) {
+                    return res.status(400).json({ error: payout.error });
                 }
+                parsedPayout = payout.value;
             }
 
             const payload = {
@@ -99,7 +147,7 @@ const gameController = {
                 levelDuration: Number(levelDuration) || 15,
                 enableBlindTimer: toBoolean(enableBlindTimer),
                 allowRebuys: toBoolean(allowRebuys),
-                maxPlayers: maxPlayers ? Number(maxPlayers) : null,
+                maxPlayers: Number(maxPlayers) || null,
                 currency: currency || "EUR",
                 payoutDistribution: parsedPayout,
                 hostId: req.user.id,
@@ -168,7 +216,7 @@ const gameController = {
             if (error.errors) {
                 console.error("Sequelize Errors:", error.errors.map(e => e.message));
             }
-            res.status(500).json({ error: error.message || "Error creating game" });
+            res.status(500).json({ error: "Error creating game" });
         }
 
     },
@@ -233,7 +281,7 @@ const gameController = {
                     {
                         model: db.User,
                         as: "host",
-                        attributes: ["id", "username", "email"],
+                        attributes: PUBLIC_USER_ATTRIBUTES,
                     },
                     {
                         model: db.GamePlayer,
@@ -242,7 +290,7 @@ const gameController = {
                             {
                                 model: db.User,
                                 as: "user",
-                                attributes: ["id", "username", "email"],
+                                attributes: PUBLIC_USER_ATTRIBUTES,
                             },
                         ],
                     },
@@ -257,7 +305,7 @@ const gameController = {
                                     {
                                         model: db.User,
                                         as: "user",
-                                        attributes: ["id", "username", "email"],
+                                        attributes: PUBLIC_USER_ATTRIBUTES,
                                     },
                                 ],
                             },
@@ -297,7 +345,7 @@ const gameController = {
                     {
                         model: db.User,
                         as: "host",
-                        attributes: ["id", "username", "email"],
+                        attributes: PUBLIC_USER_ATTRIBUTES,
                     },
                     // 🎮 Joueurs (GamePlayers + User/Guest)
                     {
@@ -307,7 +355,7 @@ const gameController = {
                             {
                                 model: db.User,
                                 as: "user",
-                                attributes: ["id", "username", "email"],
+                                attributes: PUBLIC_USER_ATTRIBUTES,
                             },
                         ],
                     },
@@ -323,7 +371,7 @@ const gameController = {
                                     {
                                         model: db.User,
                                         as: "user",
-                                        attributes: ["id", "username", "email"],
+                                        attributes: PUBLIC_USER_ATTRIBUTES,
                                     },
                                 ],
                             },
@@ -334,6 +382,12 @@ const gameController = {
 
             if (!game) {
                 return res.status(404).json({ error: "Game not found" });
+            }
+
+            // Réservé à l'hôte et aux joueurs invités (même s'ils n'ont pas encore répondu)
+            const isParticipant = game.hostId === req.user.id || game.playerLinks.some((p) => p.userId === req.user.id);
+            if (!isParticipant) {
+                return res.status(403).json({ error: "You are not part of this game" });
             }
 
             const updatedGame = await updateGameStatus(game);
@@ -373,21 +427,31 @@ const gameController = {
                 levelDuration,
                 enableBlindTimer,
                 allowRebuys,
+                maxPlayers,
+                currency,
                 payoutDistribution
             } = req.body;
+
+            const validationError = validateGameFields(req.body, { partial: true, current: game });
+            if (validationError) {
+                return res.status(400).json({ error: validationError });
+            }
 
             const fieldsToUpdate = {};
 
             if (name !== undefined) fieldsToUpdate.name = name;
             if (dateStart !== undefined) fieldsToUpdate.dateStart = dateStart;
             if (location !== undefined) fieldsToUpdate.location = location;
-            if (prizePool !== undefined) fieldsToUpdate.prizePool = prizePool;
-            if (buyIn !== undefined) fieldsToUpdate.buyIn = buyIn;
-            if (placesPaid !== undefined) fieldsToUpdate.placesPaid = placesPaid;
+            if (prizePool !== undefined) fieldsToUpdate.prizePool = Number(prizePool) || 0;
+            if (buyIn !== undefined) fieldsToUpdate.buyIn = Number(buyIn);
+            if (placesPaid !== undefined) fieldsToUpdate.placesPaid = Number(placesPaid);
             if (description !== undefined) fieldsToUpdate.description = description;
-            if (bigBlind !== undefined) fieldsToUpdate.bigBlind = bigBlind;
-            if (smallBlind !== undefined) fieldsToUpdate.smallBlind = smallBlind;
-            if (levelDuration !== undefined) fieldsToUpdate.levelDuration = levelDuration;
+            if (bigBlind !== undefined) fieldsToUpdate.bigBlind = Number(bigBlind);
+            if (smallBlind !== undefined) fieldsToUpdate.smallBlind = Number(smallBlind);
+            if (levelDuration !== undefined) fieldsToUpdate.levelDuration = Number(levelDuration);
+            // 0 ou vide = pas de limite de joueurs
+            if (maxPlayers !== undefined) fieldsToUpdate.maxPlayers = Number(maxPlayers) || null;
+            if (currency !== undefined) fieldsToUpdate.currency = currency;
             if (enableBlindTimer !== undefined) fieldsToUpdate.enableBlindTimer = toBoolean(enableBlindTimer);
             if (allowRebuys !== undefined) fieldsToUpdate.allowRebuys = toBoolean(allowRebuys);
 
@@ -398,15 +462,11 @@ const gameController = {
 
             // 🔹 Handle payoutDistribution
             if (payoutDistribution) {
-                const parsedPayout = typeof payoutDistribution === "string"
-                    ? JSON.parse(payoutDistribution)
-                    : payoutDistribution;
-
-                const total = parsedPayout.reduce((sum, p) => sum + Number(p.percent), 0);
-                if (Math.abs(total - 100) > 0.01) {
-                    return res.status(400).json({ error: "Payout distribution must sum to 100%" });
+                const payout = parsePayout(payoutDistribution);
+                if (payout.error) {
+                    return res.status(400).json({ error: payout.error });
                 }
-                fieldsToUpdate.payoutDistribution = parsedPayout;
+                fieldsToUpdate.payoutDistribution = payout.value;
             }
 
             await game.update(fieldsToUpdate);

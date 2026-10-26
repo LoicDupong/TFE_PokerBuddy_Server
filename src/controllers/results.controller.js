@@ -74,7 +74,8 @@ const resultsController = {
                     gameId: game.id,
                     gamePlayerId: resolvedGamePlayerId,
                     rank: rank++,
-                    prize: r.prize ?? 0
+                    // Colonne INTEGER : un montant décimal ou négatif ferait échouer l'insert (500)
+                    prize: Math.max(0, Math.round(Number(r.prize) || 0)),
                 }, { transaction: t });
 
                 createdResults.push(result);
@@ -131,9 +132,15 @@ const resultsController = {
             const { gameId } = req.params;
 
             const game = await db.Game.findByPk(gameId, {
-                attributes: ["id", "name", "status", "dateStart", "dateEnd"],
+                attributes: ["id", "name", "status", "dateStart", "dateEnd", "hostId"],
             });
             if (!game) return res.status(404).json({ error: "Game not found" });
+
+            // Réservé à l'hôte et aux joueurs de la partie
+            const isPlayer = await db.GamePlayer.count({ where: { gameId, userId: req.user.id } });
+            if (game.hostId !== req.user.id && !isPlayer) {
+                return res.status(403).json({ error: "You are not part of this game" });
+            }
 
             const results = await db.GameResult.findAll({
                 where: { gameId },
@@ -143,7 +150,7 @@ const resultsController = {
                         as: "player",
                         attributes: ["id", "guestName", "status"],
                         include: [
-                            { model: db.User, as: "user", attributes: ["id", "username", "email"] },
+                            { model: db.User, as: "user", attributes: ["id", "username"] },
                         ],
                     },
                 ],

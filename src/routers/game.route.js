@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { authorizeMiddleware } from "../middlewares/auth.middleware.js";
 import gameController from "../controllers/game.controller.js";
+import { uuidParam } from "../middlewares/validate.middleware.js";
 
 
 const gameRouter = Router();
+
+gameRouter.param("id", uuidParam);
 
 gameRouter
     .route('/')

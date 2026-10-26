@@ -78,7 +78,7 @@ const inviteController = {
             const invites = await db.GamePlayer.findAll({
                 where: { gameId },
                 include: [
-                    { model: db.User, as: "user", attributes: ["id", "username", "email"] },
+                    { model: db.User, as: "user", attributes: ["id", "username"] },
                 ],
             });
 
@@ -87,7 +87,8 @@ const inviteController = {
                     id: i.id,
                     type: i.user ? "user" : "guest",
                     username: i.user?.username || i.guestName,
-                    email: i.user?.email || (i.guestName?.includes("@") ? i.guestName : null),
+                    // Seuls les invités ajoutés par email gardent leur adresse (saisie par l'hôte)
+                    email: i.guestName?.includes("@") ? i.guestName : null,
                     status: i.status,
                 })),
             });
@@ -114,8 +115,12 @@ const inviteController = {
                 ],
             });
 
+            // Plus d'invitation à répondre pour une partie commencée depuis plus de 24 h
+            const cutoff = Date.now() - 24 * 60 * 60 * 1000;
             const filteredInvites = invites.filter(i =>
-                i.game.hostId !== req.user.id && i.game.status !== "finished"
+                i.game.hostId !== req.user.id
+                && i.game.status !== "finished"
+                && new Date(i.game.dateStart).getTime() >= cutoff
             );
 
             res.status(200).json({
@@ -160,6 +165,14 @@ const inviteController = {
             }
             if (invite.status !== "pending") {
                 return res.status(409).json({ error: "Invite already responded to" });
+            }
+
+            // Places = joueurs confirmés (l'hôte compris)
+            if (status === "accepted" && invite.game.maxPlayers) {
+                const acceptedCount = await db.GamePlayer.count({ where: { gameId: invite.gameId, status: "accepted" } });
+                if (acceptedCount >= invite.game.maxPlayers) {
+                    return res.status(400).json({ error: "This game is full" });
+                }
             }
 
             await invite.update({ status });

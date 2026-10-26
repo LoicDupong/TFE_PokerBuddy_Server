@@ -1,8 +1,12 @@
 import { Router } from "express";
 import { authorizeMiddleware } from "../middlewares/auth.middleware.js";
 import inviteController from "../controllers/invite.controller.js";
+import { uuidParam } from "../middlewares/validate.middleware.js";
 
 const inviteRouter = Router();
+
+inviteRouter.param("gameId", uuidParam);
+inviteRouter.param("inviteId", uuidParam);
 
 // Liste ou ajout d'invitations
 inviteRouter
