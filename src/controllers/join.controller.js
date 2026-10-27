@@ -117,6 +117,9 @@ const joinController = {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
             const { token } = req.params;
+            // Sans statut : "accepted" (comportement historique) ; "refused" = « Can't make it »
+            const wanted = req.body?.status ?? "accepted";
+            if (!ANSWERS.includes(wanted)) return res.status(400).json({ error: "Invalid status" });
 
             const game = await db.Game.findOne({
                 where: { inviteCode: token },
@@ -127,8 +130,20 @@ const joinController = {
             if (game.status !== "pending") return res.status(400).json({ error: "This game has already started or ended" });
             if (req.user.id === game.hostId) return res.status(400).json({ error: "You are the host of this game" });
 
-            // Avant le contrôle "complet" : un joueur déjà confirmé n'est pas refusé
             const existing = game.playerLinks.find(p => p.userId === req.user.id);
+
+            // Refus : une ligne "refused" pour que l'hôte voie la réponse (pas de contrôle de places)
+            if (wanted === "refused") {
+                if (existing?.status === "refused") {
+                    return res.status(200).json({ status: "refused", gameId: game.id, gameName: game.name });
+                }
+                if (existing) await existing.update({ status: "refused" });
+                else await db.GamePlayer.create({ gameId: game.id, userId: req.user.id, userName: req.user.username, status: "refused" });
+                await createNotification(game.hostId, "game_invite_responded", `${req.user.username} declined your invitation to "${game.name}"`, game.id);
+                return res.status(existing ? 200 : 201).json({ status: "refused", gameId: game.id, gameName: game.name });
+            }
+
+            // Avant le contrôle "complet" : un joueur déjà confirmé n'est pas refusé
             if (existing?.status === "accepted") {
                 return res.status(200).json({ status: "already_accepted", gameId: game.id, gameName: game.name });
             }
