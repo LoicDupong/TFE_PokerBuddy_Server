@@ -18,3 +18,12 @@ export const registerLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: "Too many accounts created, please try again later" },
 });
+
+// Réponses publiques (sans compte) aux invitations : 20 écritures par IP et par 15 min
+export const guestAnswerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again in a few minutes" },
+});

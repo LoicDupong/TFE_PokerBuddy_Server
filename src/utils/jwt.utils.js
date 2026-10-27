@@ -58,3 +58,29 @@ export function decodeToken(token) {
         });
     });
 }
+
+// Jeton d'invité (réponse sans compte). Audience distincte : il ne peut jamais servir de session
+const guestAudience = () => `${process.env.JWT_AUDIENCE}:guest`;
+
+export function generateGuestToken({ gamePlayerId, gameId }) {
+    return jwt.sign({ type: "guest", gamePlayerId, gameId }, process.env.JWT_SECRET, {
+        algorithm: 'HS512',
+        expiresIn: '60d',
+        issuer: process.env.JWT_ISSUER,
+        audience: guestAudience(),
+    });
+}
+
+// Renvoie le contenu du jeton invité, ou null s'il est invalide/expiré
+export function verifyGuestToken(token) {
+    if (typeof token !== "string" || !token) return null;
+    try {
+        const data = jwt.verify(token, process.env.JWT_SECRET, {
+            issuer: process.env.JWT_ISSUER,
+            audience: guestAudience(),
+        });
+        return data.type === "guest" ? data : null;
+    } catch {
+        return null;
+    }
+}

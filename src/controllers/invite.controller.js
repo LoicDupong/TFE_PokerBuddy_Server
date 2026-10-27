@@ -163,8 +163,9 @@ const inviteController = {
             if (invite.game.status === "finished") {
                 return res.status(400).json({ error: "Game already finished" });
             }
-            if (invite.status !== "pending") {
-                return res.status(409).json({ error: "Invite already responded to" });
+            // Changer d'avis (accepted <-> refused) reste possible tant que la partie n'est pas finie
+            if (invite.status === status) {
+                return res.status(200).json({ message: "Invite unchanged", invite });
             }
 
             // Places = joueurs confirmés (l'hôte compris)

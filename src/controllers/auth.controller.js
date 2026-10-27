@@ -1,5 +1,5 @@
 import argon2 from "argon2";
-import { generateToken } from "../utils/jwt.utils.js";
+import { generateToken, verifyGuestToken } from "../utils/jwt.utils.js";
 import db from "../models/index.js";
 import {
     findUserByEmail,
@@ -43,6 +43,20 @@ const authController = {
                 email,
                 password: hash
             });
+
+            // Rattache la réponse d'invité (lien "claim") au nouveau compte ; un claim invalide ne bloque jamais l'inscription
+            try {
+                const claim = verifyGuestToken(req.body.claim);
+                if (claim) {
+                    const row = await db.GamePlayer.findByPk(claim.gamePlayerId);
+                    if (row && row.gameId === claim.gameId && row.userId === null) {
+                        const already = await db.GamePlayer.findOne({ where: { gameId: row.gameId, userId: newUser.id } });
+                        if (!already) await row.update({ userId: newUser.id, userName: newUser.username });
+                    }
+                }
+            } catch (claimError) {
+                console.error("Claim guest error:", claimError);
+            }
 
             const token = await generateToken(newUser);
 
