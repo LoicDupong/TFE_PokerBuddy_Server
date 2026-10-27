@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "argon2": "^0.44.0",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",

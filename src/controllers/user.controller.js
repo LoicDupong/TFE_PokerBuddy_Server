@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import db from "../models/index.js"; // Sequelize models
 import { generateToken } from "../utils/jwt.utils.js";
 import { findUserByUsername, validateUsername } from "../utils/validation.utils.js";
+import { removeAvatar, storeAvatar } from "../middlewares/upload.middleware.js";
 
 const userController = {
   getUser: async (req, res) => {
@@ -207,9 +208,15 @@ const userController = {
         fieldsToUpdate.description = bio || null;
       }
 
-      // Avatar : uniquement un fichier uploadé (plus d'URL arbitraire envoyée en texte)
+      // Avatar : uniquement un fichier uploadé (plus d'URL arbitraire envoyée en texte),
+      // enregistré seulement une fois le reste du profil validé
       if (req.file) {
-        fieldsToUpdate.avatar = `/uploads/avatars/${req.file.filename}`;
+        try {
+          fieldsToUpdate.avatar = await storeAvatar(req.file, user.id);
+        } catch (error) {
+          console.error("Avatar upload error:", error);
+          return res.status(502).json({ error: "Avatar upload failed, please try again" });
+        }
       }
 
       // Si aucun champ fourni → pas d’update
@@ -259,6 +266,12 @@ const userController = {
         avatar: null,
         description: null,
       });
+
+      try {
+        await removeAvatar(user.id);
+      } catch (error) {
+        console.error("Avatar removal failed (non-blocking):", error);
+      }
 
       res.status(200).json({ message: "Profile deleted" });
     } catch (error) {
