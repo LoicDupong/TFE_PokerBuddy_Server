@@ -9,7 +9,9 @@
     "dev": "nodemon --env-file=.env.local src/app.js",
     "prod": "nodemon --env-file=.env src/app.js",
     "seed": "node --env-file=.env.local src/seeder/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "node --env-file=.env.local src/migrations/run.js",
+    "migrate:prod": "node --env-file-if-exists=.env src/migrations/run.js",
+    "test": "node --test"
   },
   "keywords": [
     "Express",

@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-export function generateToken({ id, username }) {
+export function generateToken({ id, username, tokenVersion }) {
 
     // Ecriture sous forme de promesse
     return new Promise((resolve, reject) => {
 
-        //? Donnée du token
-        const data = { id, username };
+        //? Donnée du token ; tv = version de session, comparée à users.tokenVersion à chaque requête
+        const data = { id, username, tv: tokenVersion ?? 0 };
 
         //? Clef secret pour la signature du token
         const secretKey = process.env.JWT_SECRET

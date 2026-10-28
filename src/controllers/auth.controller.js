@@ -9,6 +9,7 @@ import {
     validatePassword,
     validateUsername,
 } from "../utils/validation.utils.js";
+import { toSafeUser } from "../utils/user.utils.js";
 
 // Hash factice vérifié quand l'email n'existe pas : même temps de réponse que pour un mauvais
 // mot de passe, on ne peut pas deviner quels emails sont inscrits
@@ -61,8 +62,7 @@ const authController = {
             const token = await generateToken(newUser);
 
             //* Ne jamais renvoyer le hash
-            const { password: _, ...safeUser } = newUser.get({ plain: true });
-            res.status(201).json({ user: safeUser, token });
+            res.status(201).json({ user: toSafeUser(newUser), token });
         } catch (error) {
             // Deux inscriptions simultanées avec le même email/pseudo
             if (error.name === "SequelizeUniqueConstraintError") {
@@ -82,15 +82,20 @@ const authController = {
             const validPassword = await argon2.verify(user?.password ?? DUMMY_HASH, password);
 
             // Même message dans les deux cas : ne pas révéler si l'email existe
-            if (!user || !validPassword) {
+            // Compte supprimé : même réponse qu'un email inconnu
+            if (!user || !validPassword || user.deletedAt) {
                 return res.status(401).json({ error: "Invalid email or password" });
+            }
+
+            // Mot de passe correct mais compte désactivé par un administrateur
+            if (user.disabledAt) {
+                return res.status(403).json({ error: "This account has been disabled" });
             }
 
             // Génération du token
             const token = await generateToken(user);
 
-            const { password: _, ...safeUser } = user.get({ plain: true });
-            res.status(200).json({ user: safeUser, token });
+            res.status(200).json({ user: toSafeUser(user), token });
         } catch (error) {
             console.error("Login error:", error);
             res.status(500).json({ error: "Error logging in" });
@@ -102,7 +107,8 @@ const authController = {
             if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
             const user = await db.User.findByPk(req.user.id, {
-                attributes: ["id", "username", "email", "avatar"],
+                // tokenVersion : nécessaire pour renouveler le token, jamais renvoyé
+                attributes: ["id", "username", "email", "avatar", "role", "tokenVersion"],
             });
 
             if (!user) return res.status(404).json({ error: "User not found" });
@@ -110,7 +116,7 @@ const authController = {
             // Token renouvelé : la session glisse tant que l'utilisateur revient avant l'expiration
             const token = await generateToken(user);
 
-            res.status(200).json({ user: user.get({ plain: true }), token });
+            res.status(200).json({ user: toSafeUser(user), token });
         } catch (error) {
             console.error("Me error:", error);
             res.status(500).json({ error: "Error fetching session" });
