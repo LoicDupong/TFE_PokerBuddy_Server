@@ -1,6 +1,7 @@
 import db from "../models/index.js";
 import { createNotification } from "../utils/notification.utils.js";
 import { generateGuestToken, verifyGuestToken } from "../utils/jwt.utils.js";
+import { buildGameIcs, gameIcsUid, icsFilename, joinInviteUrl } from "../utils/ics.utils.js";
 
 const ANSWERS = ["accepted", "refused"];
 
@@ -51,6 +52,49 @@ const joinController = {
         } catch (error) {
             console.error("getJoinInfo error:", error);
             return res.status(500).json({ error: "Error fetching game" });
+        }
+    },
+
+    // .ics de la partie depuis la page d'invitation (Apple Calendar, Outlook…), sans compte.
+    // Ne contient que ce que la page publique affiche déjà (pas les notes de l'hôte).
+    getJoinIcs: async (req, res) => {
+        try {
+            const game = await db.Game.findOne({
+                where: { inviteCode: req.params.token },
+                attributes: ["id", "name", "dateStart", "location", "buyIn", "currency", "status"],
+                include: [{ model: db.User, as: "host", attributes: ["username"] }],
+            });
+            if (!game) return res.status(404).json({ error: "Invalid or disabled invite link" });
+            // Partie terminée : plus rien à ajouter à un agenda (le bouton est masqué côté client)
+            if (game.status === "finished") return res.status(404).json({ error: "This game is already finished" });
+
+            const host = game.host?.username;
+            const inviteUrl = joinInviteUrl(req.params.token, process.env.APP_URL);
+            const description = [
+                host ? `Poker night hosted by ${host}.` : "Poker night organised with PokerBuddy.",
+                `Buy-in: ${game.buyIn} ${game.currency}.`,
+                inviteUrl ? `See the details and answer the invite: ${inviteUrl}` : null,
+            ].filter(Boolean).join("\n");
+
+            const ics = buildGameIcs({
+                uid: gameIcsUid(game.id),
+                start: game.dateStart,
+                summary: game.name,
+                location: game.location,
+                description,
+                url: inviteUrl,
+            });
+
+            res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+            // "inline" : Safari iOS affiche alors directement la fiche « Ajouter au calendrier »
+            // (avec "attachment" il propose d'abord un téléchargement vers Fichiers) ;
+            // les navigateurs de bureau téléchargent le fichier dans les deux cas
+            res.setHeader("Content-Disposition", `inline; filename="${icsFilename(game.name)}"`);
+            res.setHeader("Cache-Control", "no-store");
+            return res.send(ics);
+        } catch (error) {
+            console.error("getJoinIcs error:", error);
+            return res.status(500).json({ error: "Error generating calendar file" });
         }
     },
 
