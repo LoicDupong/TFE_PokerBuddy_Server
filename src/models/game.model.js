@@ -72,10 +72,39 @@ export default function gameModel(sequelize) {
                 allowNull: false,
                 defaultValue: 1,
             },
+            // Rebuys et add-ons autorisés (enregistrés dans game_finance_ops)
             allowRebuys: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
                 defaultValue: false,
+            },
+            // Prix d'un rebuy en centimes ; null = même montant que le buy-in
+            rebuyAmountCents: {
+                type: DataTypes.INTEGER,
+                allowNull: true,
+                defaultValue: null,
+                validate: { min: 0 },
+            },
+
+            // 🎯 PKO (Progressive Knockout) : désactivé = partie classique, aucun impact
+            pkoEnabled: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+            },
+            // Part de chaque entrée (buy-in, rebuy, add-on) qui va dans la bounty du joueur ; le reste au prize pool
+            pkoBountyPercent: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: 50,
+                validate: { min: 0, max: 100 },
+            },
+            // Part de la bounty éliminée versée tout de suite à l'éliminateur ; le reste s'ajoute à sa bounty
+            pkoCashPercent: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                defaultValue: 50,
+                validate: { min: 0, max: 100 },
             },
             enableBlindTimer: {
                 type: DataTypes.BOOLEAN,

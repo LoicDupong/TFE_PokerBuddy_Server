@@ -5,6 +5,7 @@ import gameResultModel from "./gameResult.model.js";
 import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
 import notificationModel from './notification.model.js';
+import gameFinanceOpModel from './gameFinanceOp.model.js';
 
 // Récupération des variables d'env
 // Chargées par les scripts npm (--env-file), jamais implicitement :
@@ -38,6 +39,7 @@ db.GameResult = gameResultModel(sequelize);
 db.Friend = friendModel(sequelize);
 db.GamePlayer = gamePlayersModel(sequelize);
 db.Notification = notificationModel(sequelize);
+db.GameFinanceOp = gameFinanceOpModel(sequelize);
 
 // ───────────────────────────────
 // USER <-> GAME (Host)
@@ -90,6 +92,13 @@ db.Game.hasMany(db.GameResult, { foreignKey: "gameId", as: "results" });
 db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
 
 // L’accès au user se fait via: GameResult → GamePlayer → User
+
+// ───────────────────────────────
+// GAME <-> OPÉRATIONS FINANCIÈRES (rebuys, add-ons, KO)
+// ───────────────────────────────
+// Contraintes explicites : l'association ne doit pas remplacer celles déclarées dans le modèle
+db.Game.hasMany(db.GameFinanceOp, { foreignKey: "gameId", as: "financeOps", onDelete: "CASCADE", onUpdate: "CASCADE" });
+db.GameFinanceOp.belongsTo(db.Game, { foreignKey: "gameId", as: "game", onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 // USER <-> NOTIFICATION
 db.User.hasMany(db.Notification, { foreignKey: "userId", as: "notifications" });

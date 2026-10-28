@@ -40,6 +40,26 @@ const getDayBounds = ({ dayStart, dayEnd }) => {
 
 const CURRENCIES = ["EUR", "USD", "GBP"];
 
+const isBlank = (value) => value === undefined || value === null || value === "";
+// Pourcentage PKO : entier de 0 à 100 (nombre ou chaîne venant d'un formulaire)
+const isPercent = (value) => value !== "" && value !== null && Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
+
+// Réglages financiers d'une partie envoyés par le formulaire → colonnes (null/défauts si absents)
+const readFinanceSettings = (body, { partial = false } = {}) => {
+    const fields = {};
+    if (!partial || body.rebuyAmountCents !== undefined) {
+        fields.rebuyAmountCents = isBlank(body.rebuyAmountCents) ? null : Number(body.rebuyAmountCents);
+    }
+    if (!partial || body.pkoEnabled !== undefined) fields.pkoEnabled = toBoolean(body.pkoEnabled);
+    if (!partial || body.pkoBountyPercent !== undefined) fields.pkoBountyPercent = isBlank(body.pkoBountyPercent) ? 50 : Number(body.pkoBountyPercent);
+    if (!partial || body.pkoCashPercent !== undefined) fields.pkoCashPercent = isBlank(body.pkoCashPercent) ? 50 : Number(body.pkoCashPercent);
+    return fields;
+};
+
+// Une fois de l'argent engagé (Game Manager lancé), ces réglages ne bougent plus :
+// les opérations déjà enregistrées seraient rejouées avec d'autres règles
+const LOCKED_FINANCE_FIELDS = ["buyIn", "pkoEnabled", "pkoBountyPercent", "pkoCashPercent"];
+
 // Validation serveur des champs d'une partie : le client valide aussi, mais l'API ne doit pas lui faire confiance.
 // partial : modification (seuls les champs envoyés sont vérifiés) ; current : valeurs actuelles de la partie.
 const validateGameFields = (fields, { partial = false, current = {} } = {}) => {
@@ -61,6 +81,17 @@ const validateGameFields = (fields, { partial = false, current = {} } = {}) => {
     if (fields.maxPlayers && !isWholeNumber(fields.maxPlayers, 2)) return "Max players must be at least 2";
     if (fields.currency && !CURRENCIES.includes(fields.currency)) return "Currency must be EUR, USD or GBP";
     if (fields.description && String(fields.description).length > 500) return "Description too long (500 characters max)";
+
+    // Rebuys / PKO (centimes et pourcentages entiers)
+    if (!isBlank(fields.rebuyAmountCents) && !(Number.isSafeInteger(Number(fields.rebuyAmountCents)) && Number(fields.rebuyAmountCents) >= 0)) {
+        return "Rebuy price must be a positive amount";
+    }
+    if (fields.pkoBountyPercent !== undefined && !isPercent(fields.pkoBountyPercent)) {
+        return "Bounty share must be a whole percentage between 0 and 100";
+    }
+    if (fields.pkoCashPercent !== undefined && !isPercent(fields.pkoCashPercent)) {
+        return "Knockout cash share must be a whole percentage between 0 and 100";
+    }
 
     const smallBlind = Number(fields.smallBlind ?? current.smallBlind);
     const bigBlind = Number(fields.bigBlind ?? current.bigBlind);
@@ -151,6 +182,8 @@ const gameController = {
                 currency: currency || "EUR",
                 payoutDistribution: parsedPayout,
                 hostId: req.user.id,
+                // Prix du rebuy et PKO (désactivé par défaut : partie classique)
+                ...readFinanceSettings(req.body),
             };
 
             const parsedInvites = invites
@@ -467,6 +500,20 @@ const gameController = {
                     return res.status(400).json({ error: payout.error });
                 }
                 fieldsToUpdate.payoutDistribution = payout.value;
+            }
+
+            // 🔹 Prix du rebuy et PKO
+            Object.assign(fieldsToUpdate, readFinanceSettings(req.body, { partial: true }));
+
+            // Argent déjà engagé : buy-in et règles PKO verrouillés (seuls les changements réels sont refusés,
+            // le formulaire d'édition renvoie tous les champs)
+            const changesLockedField = LOCKED_FINANCE_FIELDS.some((field) =>
+                fieldsToUpdate[field] !== undefined && fieldsToUpdate[field] !== game[field]);
+            if (changesLockedField) {
+                const activeOps = await db.GameFinanceOp.count({ where: { gameId: game.id, voidedAt: null } });
+                if (activeOps > 0) {
+                    return res.status(409).json({ error: "Players have already paid in: the buy-in and bounty settings can't change anymore" });
+                }
             }
 
             await game.update(fieldsToUpdate);
