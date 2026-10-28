@@ -27,7 +27,9 @@ export default function notificationModel(sequelize) {
                 'game_invite',
                 'game_invite_responded',
                 'game_result',
-                'game_result_reminder'
+                'game_result_reminder',
+                // Partie annulée parce que son hôte a supprimé son compte (referenceId null : la partie n'existe plus)
+                'game_cancelled'
             ),
             allowNull: false,
         },
