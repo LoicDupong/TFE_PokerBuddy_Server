@@ -9,6 +9,8 @@ import notificationRouter from "./notification.route.js";
 import leaderboardRouter from "./leaderboard.route.js";
 import joinRouter from "./join.route.js";
 import financeRouter from "./finance.route.js";
+import supportRouter from "./support.route.js";
+import adminSupportRouter from "./adminSupport.route.js";
 
 export const apiRouter = Router();
 
@@ -22,3 +24,5 @@ apiRouter.use("/friends", friendRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/leaderboard", leaderboardRouter);
 apiRouter.use("/join", joinRouter);
+apiRouter.use("/support", supportRouter);
+apiRouter.use("/admin/support", adminSupportRouter);

@@ -6,6 +6,8 @@ import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
 import notificationModel from './notification.model.js';
 import gameFinanceOpModel from './gameFinanceOp.model.js';
+import supportTicketModel from './supportTicket.model.js';
+import supportMessageModel from './supportMessage.model.js';
 
 // Récupération des variables d'env
 // Chargées par les scripts npm (--env-file), jamais implicitement :
@@ -42,6 +44,8 @@ db.Friend = friendModel(sequelize);
 db.GamePlayer = gamePlayersModel(sequelize);
 db.Notification = notificationModel(sequelize);
 db.GameFinanceOp = gameFinanceOpModel(sequelize);
+db.SupportTicket = supportTicketModel(sequelize);
+db.SupportMessage = supportMessageModel(sequelize);
 
 // ───────────────────────────────
 // USER <-> GAME (Host)
@@ -101,6 +105,15 @@ db.GameResult.belongsTo(db.Game, { foreignKey: "gameId", as: "game" });
 // Contraintes explicites : l'association ne doit pas remplacer celles déclarées dans le modèle
 db.Game.hasMany(db.GameFinanceOp, { foreignKey: "gameId", as: "financeOps", onDelete: "CASCADE", onUpdate: "CASCADE" });
 db.GameFinanceOp.belongsTo(db.Game, { foreignKey: "gameId", as: "game", onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+// ───────────────────────────────
+// SUPPORT : USER -> TICKETS -> MESSAGES
+// ───────────────────────────────
+db.User.hasMany(db.SupportTicket, { foreignKey: "userId", as: "supportTickets", onDelete: "CASCADE", onUpdate: "CASCADE" });
+db.SupportTicket.belongsTo(db.User, { foreignKey: "userId", as: "user", onDelete: "CASCADE", onUpdate: "CASCADE" });
+db.SupportTicket.hasMany(db.SupportMessage, { foreignKey: "ticketId", as: "messages", onDelete: "CASCADE", onUpdate: "CASCADE" });
+db.SupportMessage.belongsTo(db.SupportTicket, { foreignKey: "ticketId", as: "ticket", onDelete: "CASCADE", onUpdate: "CASCADE" });
+db.SupportMessage.belongsTo(db.User, { foreignKey: "authorId", as: "author", onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 // USER <-> NOTIFICATION
 db.User.hasMany(db.Notification, { foreignKey: "userId", as: "notifications" });
