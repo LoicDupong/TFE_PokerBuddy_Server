@@ -15,10 +15,29 @@ export default function gameResultModel(sequelize) {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        // Unités entières (historique) : toujours rempli, arrondi de prizeCents pour les nouvelles parties
         prize: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        // Parties suivies par les opérations financières (null pour les anciennes) :
+        // prize money, bounties reçues (KO + bounty finale) et total investi, en centimes.
+        // Les stats utilisent investedCents ≠ null pour savoir quelle formule appliquer.
+        prizeCents: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: null,
+        },
+        bountyCents: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: null,
+        },
+        investedCents: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: null,
         },
         gameId: {
             type: DataTypes.UUID,

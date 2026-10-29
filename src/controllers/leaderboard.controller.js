@@ -1,5 +1,7 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
+import { computePlayerStats } from "../utils/finance.utils.js";
+import { findFinishedResults } from "../utils/financeStats.utils.js";
 
 const leaderboardController = {
     getLeaderboard: async (req, res) => {
@@ -25,24 +27,7 @@ const leaderboardController = {
                 visibleIds.add(f.userId === req.user.id ? f.friendId : f.userId);
             }
 
-            const allResults = await db.GameResult.findAll({
-                include: [
-                    {
-                        model: db.GamePlayer,
-                        as: "player",
-                        where: { userId: { [Op.in]: [...visibleIds] } },
-                        attributes: ["userId"],
-                    },
-                    {
-                        model: db.Game,
-                        as: "game",
-                        where: { status: "finished" },
-                        attributes: ["buyIn", "placesPaid", "dateEnd"],
-                    },
-                ],
-                attributes: ["rank", "prize"],
-                order: [[{ model: db.Game, as: "game" }, "dateEnd", "ASC"]],
-            });
+            const allResults = await findFinishedResults([...visibleIds]);
 
             // Group by userId
             const byUser = {};
@@ -63,28 +48,27 @@ const leaderboardController = {
             });
             const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
 
+            // Net : prize − buy-in pour les anciennes parties, prize money + bounties − investi pour les nouvelles
             const players = userIds.map(uid => {
-                const results = byUser[uid];
-                const totalGames = results.length;
-                const wins = results.filter(r => r.rank === 1).length;
-                const losses = totalGames - wins;
-                const winRate = ((wins / totalGames) * 100).toFixed(1);
-                const paidPlaces = results.filter(r => r.rank <= r.game.placesPaid).length;
-                const avgPlacement = parseFloat((results.reduce((s, r) => s + r.rank, 0) / totalGames).toFixed(2));
-                const netResult = results.reduce((s, r) => s + (r.prize - r.game.buyIn), 0);
-
-                let bestStreak = 0, cur = 0;
-                for (const r of results) {
-                    if (r.rank === 1) { cur++; bestStreak = Math.max(bestStreak, cur); }
-                    else { cur = 0; }
-                }
-
-                return { id: uid, username: userMap[uid] || "Unknown", totalGames, wins, losses, winRate, paidPlaces, avgPlacement, netResult, bestStreak };
+                const s = computePlayerStats(byUser[uid]);
+                return {
+                    id: uid,
+                    username: userMap[uid] || "Unknown",
+                    totalGames: s.totalGames,
+                    wins: s.wins,
+                    losses: s.losses,
+                    winRate: ((s.wins / s.totalGames) * 100).toFixed(1),
+                    paidPlaces: s.paidPlaces,
+                    avgPlacement: parseFloat((s.rankSum / s.totalGames).toFixed(2)),
+                    netResult: s.netResult,
+                    netResultCents: s.netResultCents,
+                    bestStreak: s.bestStreak,
+                };
             });
 
             // Sort: net result DESC, wins DESC, avg placement ASC
             players.sort((a, b) =>
-                b.netResult - a.netResult ||
+                b.netResultCents - a.netResultCents ||
                 b.wins - a.wins ||
                 a.avgPlacement - b.avgPlacement
             );

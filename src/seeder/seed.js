@@ -18,6 +18,11 @@ try {
     await db.sequelize.sync({ force: true });
     console.log("✅ All models were synchronized successfully.");
 
+    // Le schéma vient d'être recréé depuis les modèles : la liste des migrations appliquées ne
+    // correspond plus à la base. On l'oublie pour que "npm run migrate" les rejoue (elles sont
+    // idempotentes) et ajoute ce que les modèles ne décrivent pas (contraintes CHECK, backfills).
+    await db.sequelize.query("DROP TABLE IF EXISTS schema_migrations");
+
     await seederInsert();
 
 } catch (error) {

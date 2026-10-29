@@ -5,6 +5,7 @@ import db from "../models/index.js"; // Sequelize models
 import { generateToken } from "../utils/jwt.utils.js";
 import { findUserByUsername, validateUsername } from "../utils/validation.utils.js";
 import { removeAvatar, storeAvatar } from "../middlewares/upload.middleware.js";
+import { getPlayerStats } from "../utils/financeStats.utils.js";
 
 const userController = {
   getUser: async (req, res) => {
@@ -19,57 +20,12 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const gameResults = await db.GameResult.findAll({
-        include: [
-          {
-            model: db.GamePlayer,
-            as: "player",
-            where: { userId: user.id },
-            attributes: [],
-          },
-          {
-            model: db.Game,
-            as: "game",
-            where: { status: "finished" },
-            attributes: ["buyIn", "placesPaid", "dateEnd"],
-          },
-        ],
-        attributes: ["rank", "prize"],
-        order: [[{ model: db.Game, as: "game" }, "dateEnd", "ASC"]],
-      });
-
-      const totalGames = gameResults.length;
-      const wins = gameResults.filter(r => r.rank === 1).length;
-      const losses = totalGames - wins;
-      const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : "0.0";
-      const paidPlaces = gameResults.filter(r => r.rank <= r.game.placesPaid).length;
-      const avgPlacement = totalGames > 0
-        ? (gameResults.reduce((sum, r) => sum + r.rank, 0) / totalGames).toFixed(2)
-        : null;
-      const netResult = gameResults.reduce((sum, r) => sum + (r.prize - r.game.buyIn), 0);
-
-      let bestStreak = 0, currentStreak = 0;
-      for (const r of gameResults) {
-        if (r.rank === 1) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak); }
-        else { currentStreak = 0; }
-      }
-
-      const gamesHosted = await db.Game.count({ where: { hostId: user.id } });
+      const stats = await getPlayerStats(user.id);
 
       res.status(200).json({
         user: {
           ...user.toJSON(),
-          stats: {
-            totalGames,
-            wins,
-            losses,
-            winRate,
-            paidPlaces,
-            avgPlacement,
-            netResult,
-            bestStreak,
-            gamesHosted,
-          },
+          stats,
         }
       });
     } catch (error) {
@@ -105,42 +61,7 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const gameResults = await db.GameResult.findAll({
-        include: [
-          {
-            model: db.GamePlayer,
-            as: "player",
-            where: { userId: user.id },
-            attributes: [],
-          },
-          {
-            model: db.Game,
-            as: "game",
-            where: { status: "finished" },
-            attributes: ["buyIn", "placesPaid", "dateEnd"],
-          },
-        ],
-        attributes: ["rank", "prize"],
-        order: [[{ model: db.Game, as: "game" }, "dateEnd", "ASC"]],
-      });
-
-      const totalGames = gameResults.length;
-      const wins = gameResults.filter(r => r.rank === 1).length;
-      const losses = totalGames - wins;
-      const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : "0.0";
-      const paidPlaces = gameResults.filter(r => r.rank <= r.game.placesPaid).length;
-      const avgPlacement = totalGames > 0
-        ? (gameResults.reduce((sum, r) => sum + r.rank, 0) / totalGames).toFixed(2)
-        : null;
-      const netResult = gameResults.reduce((sum, r) => sum + (r.prize - r.game.buyIn), 0);
-
-      let bestStreak = 0, currentStreak = 0;
-      for (const r of gameResults) {
-        if (r.rank === 1) { currentStreak++; bestStreak = Math.max(bestStreak, currentStreak); }
-        else { currentStreak = 0; }
-      }
-
-      const gamesHosted = await db.Game.count({ where: { hostId: user.id } });
+      const stats = await getPlayerStats(user.id);
 
       const { Friends, FriendOf, ...userFields } = user.get({ plain: true });
 
@@ -154,17 +75,7 @@ const userController = {
       res.status(200).json({
         user: {
           ...userFields,
-          stats: {
-            totalGames,
-            wins,
-            losses,
-            winRate,
-            paidPlaces,
-            avgPlacement,
-            netResult,
-            bestStreak,
-            gamesHosted,
-          },
+          stats,
           friends: allFriends,
         }
       });
