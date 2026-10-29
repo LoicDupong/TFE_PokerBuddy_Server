@@ -12,6 +12,7 @@ joinRouter.param("token", uuidParam);
 // Routes publiques (sans compte) ; "/guest" déclaré avant "/:token"
 joinRouter.patch("/guest", guestAnswerLimiter, joinController.updateGuestAnswer);
 joinRouter.get("/:token", joinController.getJoinInfo);
+joinRouter.get("/:token/ics", joinController.getJoinIcs);
 joinRouter.post("/:token/guest", guestAnswerLimiter, joinController.answerAsGuest);
 
 joinRouter.route("/:token").post(authorizeMiddleware(), joinController.joinByToken);

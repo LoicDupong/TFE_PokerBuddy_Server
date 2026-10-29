@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import db from "../models/index.js";
 import { updateGameStatus } from "../utils/gameStatus.utils.js";
 import { createNotification } from "../utils/notification.utils.js";
+import { buildGameIcs, gameIcsUid } from "../utils/ics.utils.js";
 
 // Les checkboxes arrivent en booléens (validés par zod côté client) ou en "on" (FormData brut)
 const toBoolean = (value) => value === true || value === "on" || value === "true";
@@ -512,32 +513,18 @@ const gameController = {
             });
             if (!game) return res.status(404).json({ error: "Game not found" });
 
-            const start = new Date(game.dateStart);
-            const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
-
-            // Le "Z" final marque l'heure comme UTC ; sans lui les agendas la lisent en heure locale
-            const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-            const escape = (str) => (str || "").replace(/[,;\\]/g, (c) => `\\${c}`).replace(/\r?\n/g, "\\n");
-
-            const lines = [
-                "BEGIN:VCALENDAR",
-                "VERSION:2.0",
-                "PRODID:-//PokerBuddy//EN",
-                "BEGIN:VEVENT",
-                `UID:${game.id}@pokerbuddy`,
-                `DTSTAMP:${fmt(new Date())}`,
-                `DTSTART:${fmt(start)}`,
-                `DTEND:${fmt(end)}`,
-                `SUMMARY:${escape(game.name)}`,
-                game.location ? `LOCATION:${escape(game.location)}` : null,
-                game.description ? `DESCRIPTION:${escape(game.description)}` : null,
-                "END:VEVENT",
-                "END:VCALENDAR",
-            ].filter(Boolean).join("\r\n");
+            // Générateur partagé avec GET /api/join/:token/ics (UTC, échappement, pliage des lignes)
+            const ics = buildGameIcs({
+                uid: gameIcsUid(game.id),
+                start: game.dateStart,
+                summary: game.name,
+                location: game.location,
+                description: game.description,
+            });
 
             res.setHeader("Content-Type", "text/calendar; charset=utf-8");
             res.setHeader("Content-Disposition", `attachment; filename="game-${game.id}.ics"`);
-            return res.send(lines);
+            return res.send(ics);
         } catch (error) {
             console.error("getGameIcs error:", error);
             return res.status(500).json({ error: "Error generating calendar file" });
