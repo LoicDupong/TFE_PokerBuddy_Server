@@ -170,7 +170,8 @@ const gameController = {
                 realStart: parseRealStart(realStart, dateStart),
                 location,
                 buyIn: Number(buyIn),
-                prizePool: Number(prizePool),
+                // Absent → 0 (Number(undefined) = NaN faisait échouer l'insert en 500)
+                prizePool: Number(prizePool) || 0,
                 placesPaid: Number(placesPaid),
                 description,
                 bigBlind: Number(bigBlind),
