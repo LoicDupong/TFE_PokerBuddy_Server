@@ -14,18 +14,20 @@ const userController = {
       const { id } = req.params;
 
       const user = await db.User.findByPk(id, {
-        attributes: ["id", "username", "avatar", "description", "createdAt"],
+        attributes: ["id", "username", "avatar", "description", "createdAt", "deletedAt"],
       });
 
-      if (!user) {
+      // Compte supprimé : plus de profil public (ses lignes de résultats historiques restent)
+      if (!user || user.deletedAt) {
         return res.status(404).json({ error: "User not found" });
       }
 
       const stats = await getPlayerStats(user.id);
+      const { deletedAt, ...profile } = user.toJSON();
 
       res.status(200).json({
         user: {
-          ...user.toJSON(),
+          ...profile,
           stats,
         }
       });

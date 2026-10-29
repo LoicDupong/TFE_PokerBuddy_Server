@@ -64,6 +64,56 @@ async function pickDeletedUsername(userId, transaction) {
     return taken ? `deleted_${userId.replace(/-/g, "")}` : short;
 }
 
+/**
+ * Annulation de parties non terminées : implémentation unique, utilisée par deleteAccount (parties
+ * de l'hôte supprimé) et par l'annulation d'une partie par un administrateur.
+ * Dans la transaction de l'appelant : relève les comptes actifs à prévenir (invités pending/accepted
+ * et hôte), supprime les notifications qui pointent vers ces parties (lien mort) puis les parties
+ * (CASCADE vers game_players, game_results et game_finance_ops).
+ * Les notifications game_cancelled partent après le commit, via notifyCancelledGames.
+ * @param {{ id: string, name: string, hostId: string }[]} games  parties non terminées (statut vérifié par l'appelant)
+ * @param {{ transaction: import("sequelize").Transaction, excludeUserId?: string|null }} options
+ *   excludeUserId : compte à ne pas prévenir (l'hôte qui supprime son compte)
+ * @returns {Promise<{ games: object[], recipients: { gameId: string, userId: string }[], removedNotifications: number }>}
+ */
+export async function cancelUnfinishedGames(games, { transaction, excludeUserId = null }) {
+    if (!games.length) return { games: [], recipients: [], removedNotifications: 0 };
+    const ids = games.map((g) => g.id);
+
+    const players = await db.GamePlayer.findAll({
+        where: { gameId: { [Op.in]: ids }, userId: { [Op.ne]: null }, status: { [Op.in]: ["pending", "accepted"] } },
+        attributes: ["gameId", "userId"],
+        transaction,
+    });
+    // Une seule notification par compte et par partie ; les comptes supprimés ne sont pas prévenus
+    // (un compte désactivé l'est : il la verra s'il est réactivé)
+    const pairs = new Map();
+    for (const { gameId, userId } of [...games.map((g) => ({ gameId: g.id, userId: g.hostId })), ...players]) {
+        if (userId && userId !== excludeUserId) pairs.set(`${gameId}:${userId}`, { gameId, userId });
+    }
+    const activeIds = pairs.size ? new Set((await db.User.findAll({
+        where: { id: { [Op.in]: [...new Set([...pairs.values()].map((p) => p.userId))] }, deletedAt: null },
+        attributes: ["id"],
+        transaction,
+    })).map((u) => u.id)) : new Set();
+    const recipients = [...pairs.values()].filter((p) => activeIds.has(p.userId));
+
+    const removedNotifications = await db.Notification.destroy({ where: { referenceId: { [Op.in]: ids } }, transaction });
+    await db.Game.destroy({ where: { id: { [Op.in]: ids } }, transaction });
+
+    return { games: games.map(({ id, name }) => ({ id, name })), recipients, removedNotifications };
+}
+
+/**
+ * Après le commit : notification game_cancelled (referenceId null, la partie n'existe plus).
+ * @param {{ games: { id: string, name: string }[], recipients: { gameId: string, userId: string }[] }} cancellation
+ * @param {(gameName: string) => string} messageFor  phrase complète (ex. raison de l'annulation)
+ */
+export async function notifyCancelledGames({ games, recipients }, messageFor) {
+    const names = new Map(games.map((g) => [g.id, g.name]));
+    await Promise.all(recipients.map((r) => createNotification(r.userId, "game_cancelled", messageFor(names.get(r.gameId)), null)));
+}
+
 // LIKE : le pseudo est une valeur littérale, pas un motif
 const escapeLike = (value) => value.replace(/[\\%_]/g, "\\$&");
 
@@ -101,18 +151,12 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
 
         // 1. Parties non terminées qu'il organise : annulées. Sans hôte, personne ne peut
         //    les gérer ni saisir les résultats ; les invités avec un compte sont prévenus.
-        const cancelledGames = await db.Game.findAll({
+        //    (annulation effectuée à l'étape 4 par cancelUnfinishedGames, partagée avec l'admin)
+        const gamesToCancel = await db.Game.findAll({
             where: { hostId: user.id, status: { [Op.in]: UNFINISHED_STATUSES } },
-            attributes: ["id", "name"],
+            attributes: ["id", "name", "hostId"],
             transaction,
         });
-        const cancelledIds = cancelledGames.map((g) => g.id);
-        const playersToWarn = cancelledIds.length ? await db.GamePlayer.findAll({
-            where: { gameId: { [Op.in]: cancelledIds }, userId: { [Op.ne]: user.id }, status: { [Op.in]: ["pending", "accepted"] } },
-            include: [{ model: db.User, as: "user", attributes: [], where: { deletedAt: null }, required: true }],
-            attributes: ["gameId", "userId"],
-            transaction,
-        }) : [];
 
         // 2. Ses invitations/participations aux parties non terminées des autres : retirées
         const participations = await db.GamePlayer.findAll({
@@ -137,10 +181,9 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
             transaction,
         })).map((row) => row.id);
 
-        // 3. Notifications : les siennes, celles des parties annulées (lien mort), et celles des autres
-        //    qui affichent son pseudo (demandes d'ami, réponses à une invitation)
+        // 3. Notifications : les siennes, et celles des autres qui affichent son pseudo (demandes d'ami,
+        //    réponses à une invitation) ; celles des parties annulées partent avec elles (étape 4)
         const notificationConditions = [{ userId: user.id }];
-        if (cancelledIds.length) notificationConditions.push({ referenceId: { [Op.in]: cancelledIds } });
         if (friendshipIds.length) {
             notificationConditions.push({ type: { [Op.in]: ["friend_request", "friend_accepted"] }, referenceId: { [Op.in]: friendshipIds } });
         }
@@ -153,12 +196,13 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
                 message: { [Op.like]: `${name} %`, [Op.notLike]: `${name} (guest)%` },
             });
         }
-        const removedNotifications = await db.Notification.destroy({ where: { [Op.or]: notificationConditions }, transaction });
+        const removedOwnNotifications = await db.Notification.destroy({ where: { [Op.or]: notificationConditions }, transaction });
 
         // 4. Suppressions (game_players et game_results des parties annulées suivent par CASCADE sur games).
         //    Un joueur qui a de l'argent engagé (buy-in, rebuy) ou un knockout dans une partie en cours
         //    reste dans la partie (anonymisé à l'étape 5) : le rejeu des opérations financières en dépend.
-        if (cancelledIds.length) await db.Game.destroy({ where: { id: { [Op.in]: cancelledIds } }, transaction });
+        const cancellation = await cancelUnfinishedGames(gamesToCancel, { transaction, excludeUserId: user.id });
+        const removedNotifications = removedOwnNotifications + cancellation.removedNotifications;
         if (participations.length) {
             const ops = await db.GameFinanceOp.findAll({
                 where: { gameId: { [Op.in]: [...new Set(participations.map((p) => p.game.id))] } },
@@ -198,19 +242,13 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
             passwordResetExpiresAt: null,
         }, { transaction });
 
-        return { previousAvatar, cancelledGames, playersToWarn, participations, removedFriendships, removedNotifications };
+        return { previousAvatar, cancellation, participations, removedFriendships, removedNotifications };
     });
 
     // Après le commit : effets externes et notifications (non bloquants)
     await removeStoredAvatar(outcome.previousAvatar, userId);
 
-    const gameNames = new Map(outcome.cancelledGames.map((g) => [g.id, g.name]));
-    await Promise.all(outcome.playersToWarn.map((p) => createNotification(
-        p.userId,
-        "game_cancelled",
-        `"${gameNames.get(p.gameId)}" was cancelled because the host deleted their account`,
-        null // la partie n'existe plus : pas de lien
-    )));
+    await notifyCancelledGames(outcome.cancellation, (name) => `"${name}" was cancelled because the host deleted their account`);
     await Promise.all(outcome.participations.filter((p) => p.status === "accepted").map((p) => createNotification(
         p.game.hostId,
         "game_invite_responded",
@@ -221,7 +259,7 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
     return {
         userId,
         actorId,
-        cancelledGames: outcome.cancelledGames.length,
+        cancelledGames: outcome.cancellation.games.length,
         leftGames: outcome.participations.length,
         removedFriendships: outcome.removedFriendships,
         removedNotifications: outcome.removedNotifications,
