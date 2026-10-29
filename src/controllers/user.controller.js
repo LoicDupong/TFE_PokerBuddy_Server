@@ -6,6 +6,7 @@ import { generateToken } from "../utils/jwt.utils.js";
 import { findUserByUsername, validateUsername } from "../utils/validation.utils.js";
 import { removeAvatar, storeAvatar } from "../middlewares/upload.middleware.js";
 import { getPlayerStats } from "../utils/financeStats.utils.js";
+import { AccountError, deleteAccount } from "../utils/account.utils.js";
 
 const userController = {
   getUser: async (req, res) => {
@@ -159,35 +160,33 @@ const userController = {
 
 
 
+  // DELETE /api/user/me { password } : réauthentification obligatoire, puis suppression (anonymisation)
+  // par l'implémentation unique deleteAccount (politique détaillée dans utils/account.utils.js)
   deleteMe: async (req, res) => {
     try {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
-      const user = await db.User.findByPk(req.user.id);
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      if (!password) return res.status(400).json({ error: "Password is required" });
 
-
+      const user = await db.User.findByPk(req.user.id, { attributes: ["id", "password"] });
       if (!user) return res.status(404).json({ error: "User not found" });
 
-      // Anonymisé plutôt que supprimé (ses résultats restent dans les parties des autres).
-      // Pseudo unique par compte (la colonne est unique) et mot de passe aléatoire : connexion impossible
-      await user.update({
-        email: `deleted_${user.id}@example.com`,
-        username: `deleted_${user.id}`,
-        password: await argon2.hash(randomUUID()),
-        avatar: null,
-        description: null,
-      });
-
-      try {
-        await removeAvatar(user.id);
-      } catch (error) {
-        console.error("Avatar removal failed (non-blocking):", error);
+      // 400 et pas 401 : le client déconnecte l'utilisateur sur tout 401
+      if (!(await argon2.verify(user.password, password))) {
+        return res.status(400).json({ error: "Incorrect password", code: "INVALID_PASSWORD" });
       }
 
-      res.status(200).json({ message: "Profile deleted" });
+      await deleteAccount(user.id, { actorId: req.user.id });
+
+      res.status(200).json({ message: "Account deleted" });
     } catch (error) {
+      if (error instanceof AccountError) {
+        const status = error.code === "USER_NOT_FOUND" ? 404 : 400;
+        return res.status(status).json({ error: error.message, code: error.code });
+      }
       console.error("deleteMe error:", error);
-      res.status(500).json({ error: "Error deleting profile" });
+      res.status(500).json({ error: "Error deleting account" });
     }
   },
 
@@ -205,9 +204,11 @@ const userController = {
 
       const users = await db.User.findAll({
         where: {
-          // Les comptes supprimés (pseudo "deleted_…") n'apparaissent pas
-          username: { [Op.iLike]: `%${pattern}%`, [Op.notILike]: "deleted\\_%" },
+          username: { [Op.iLike]: `%${pattern}%` },
           id: { [Op.ne]: req.user.id },
+          // Les comptes supprimés ou désactivés n'apparaissent pas
+          deletedAt: null,
+          disabledAt: null,
         },
         attributes: ["id", "username", "avatar"], // ce que tu veux exposer
         limit: 10,

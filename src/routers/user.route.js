@@ -3,6 +3,7 @@ import { authorizeMiddleware } from "../middlewares/auth.middleware.js";
 import userController from "../controllers/user.controller.js";
 import { uploadAvatar } from "../middlewares/upload.middleware.js";
 import { uuidParam } from "../middlewares/validate.middleware.js";
+import { passwordCheckLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const userRouter = Router();
 
@@ -16,7 +17,8 @@ userRouter
     uploadAvatar,
     userController.updateMe
   )
-  .delete(authorizeMiddleware(), userController.deleteMe);
+  // Body { password } : réauthentification ; 5 échecs max par compte et par 15 min
+  .delete(authorizeMiddleware(), passwordCheckLimiter, userController.deleteMe);
 
 // 🔹 recherche par username
 userRouter
