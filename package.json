@@ -11,6 +11,8 @@
     "seed": "node --env-file=.env.local src/seeder/seed.js",
     "migrate": "node --env-file=.env.local src/migrations/run.js",
     "migrate:prod": "node --env-file-if-exists=.env src/migrations/run.js",
+    "admin:grant": "node --env-file=.env.local scripts/grant-admin.mjs",
+    "admin:grant:prod": "node --env-file-if-exists=.env scripts/grant-admin.mjs",
     "test": "node --test"
   },
   "keywords": [
