@@ -196,7 +196,7 @@ const adminController = {
                 return { changed: true };
             });
             const body = { user: toAdminUser(user), changed: true };
-            if (user.id === req.user.id) body.token = generateToken(user);
+            if (user.id === req.user.id) body.token = await generateToken(user);
             res.status(200).json(body);
         } catch (error) {
             sendError(res, error, "revokeSessions");
