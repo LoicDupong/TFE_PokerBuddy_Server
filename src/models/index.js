@@ -18,6 +18,8 @@ if (!DATABASE_URL) {
 
 const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',
+  // Le SQL loggé contient des données personnelles (emails, contenu des requêtes) : dev uniquement
+  logging: process.env.NODE_ENV === 'dev' ? console.log : false,
   // DB_SSL=false pour une base Postgres locale (Docker) sans SSL
   dialectOptions: DB_SSL === 'false' ? {} : {
     ssl: {
