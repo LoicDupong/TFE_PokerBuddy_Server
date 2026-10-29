@@ -6,6 +6,7 @@ import friendModel from './friend.model.js';
 import gamePlayersModel from './gamePlayers.model.js';
 import notificationModel from './notification.model.js';
 import gameFinanceOpModel from './gameFinanceOp.model.js';
+import adminAuditLogModel from './adminAuditLog.model.js';
 
 // Récupération des variables d'env
 // Chargées par les scripts npm (--env-file), jamais implicitement :
@@ -42,6 +43,7 @@ db.Friend = friendModel(sequelize);
 db.GamePlayer = gamePlayersModel(sequelize);
 db.Notification = notificationModel(sequelize);
 db.GameFinanceOp = gameFinanceOpModel(sequelize);
+db.AdminAuditLog = adminAuditLogModel(sequelize);
 
 // ───────────────────────────────
 // USER <-> GAME (Host)
@@ -105,4 +107,7 @@ db.GameFinanceOp.belongsTo(db.Game, { foreignKey: "gameId", as: "game", onDelete
 // USER <-> NOTIFICATION
 db.User.hasMany(db.Notification, { foreignKey: "userId", as: "notifications" });
 db.Notification.belongsTo(db.User, { foreignKey: "userId", as: "user" });
+
+// USER <-> JOURNAL D'AUDIT ADMIN (auteur de l'action)
+db.AdminAuditLog.belongsTo(db.User, { foreignKey: "actorId", as: "actor", onDelete: "CASCADE", onUpdate: "CASCADE" });
 
