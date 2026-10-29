@@ -27,7 +27,7 @@ test("parsePagination clamps page and pageSize", () => {
 });
 
 test("escapeLike neutralises wildcards", () => {
-    assert.equal(escapeLike("50%_off\\"), "50\%\_off\\\\");
+    assert.equal(escapeLike("50%_off\\"), "50\\%\\_off\\\\");
 });
 
 test("buildTicketMail escapes HTML from user content", () => {
