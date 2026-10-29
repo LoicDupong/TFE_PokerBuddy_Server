@@ -8,6 +8,7 @@ import notificationModel from './notification.model.js';
 import gameFinanceOpModel from './gameFinanceOp.model.js';
 import supportTicketModel from './supportTicket.model.js';
 import supportMessageModel from './supportMessage.model.js';
+import pageViewDailyModel from './pageViewDaily.model.js';
 
 // Récupération des variables d'env
 // Chargées par les scripts npm (--env-file), jamais implicitement :
@@ -46,6 +47,7 @@ db.Notification = notificationModel(sequelize);
 db.GameFinanceOp = gameFinanceOpModel(sequelize);
 db.SupportTicket = supportTicketModel(sequelize);
 db.SupportMessage = supportMessageModel(sequelize);
+db.PageViewDaily = pageViewDailyModel(sequelize);
 
 // ───────────────────────────────
 // USER <-> GAME (Host)

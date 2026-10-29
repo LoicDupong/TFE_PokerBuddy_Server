@@ -11,6 +11,8 @@ import joinRouter from "./join.route.js";
 import financeRouter from "./finance.route.js";
 import supportRouter from "./support.route.js";
 import adminSupportRouter from "./adminSupport.route.js";
+import analyticsRouter from "./analytics.route.js";
+import adminAnalyticsRouter from "./adminAnalytics.route.js";
 
 export const apiRouter = Router();
 
@@ -26,3 +28,5 @@ apiRouter.use("/leaderboard", leaderboardRouter);
 apiRouter.use("/join", joinRouter);
 apiRouter.use("/support", supportRouter);
 apiRouter.use("/admin/support", adminSupportRouter);
+apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/admin/analytics", adminAnalyticsRouter);

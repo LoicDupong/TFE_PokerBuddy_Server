@@ -82,7 +82,7 @@ check("empty user message -> 400", (await call("POST", `/support/tickets/${ticke
 section("Analytics: pageview");
 const UA = { "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0 Safari/537.36" };
 const pv = (path, referrer, headers = UA) => call("POST", "/analytics/pageview", null, { path, referrer }, headers);
-check("public pageview -> 204", (await pv("/games/3f2b1c9e-1111-4222-8333-444455556666/results?x=1", "https://www.google.com/search?q=poker")).status === 204);
+check("public pageview -> 204", (await pv("/games/3f2b1c9e-1111-4222-8333-444455556666/edit?x=1", "https://www.google.com/search?q=poker")).status === 204);
 check("join token normalized", (await pv("/join/abcDEF123456", "")).status === 204);
 check("unknown path ignored (204)", (await pv("/wp-admin/setup.php", "")).status === 204);
 check("bot ignored (204)", (await pv("/learn", "", { "User-Agent": "Googlebot/2.1" })).status === 204);
@@ -93,10 +93,16 @@ check("anonymous overview -> 401", (await call("GET", "/admin/analytics/overview
 check("non-admin overview -> 403", (await call("GET", "/admin/analytics/overview", ace)).status === 403);
 const ov = await call("GET", "/admin/analytics/overview", admin);
 check("overview 200 with expected shape", ov.status === 200 && ov.data.totals && Array.isArray(ov.data.daily) && Array.isArray(ov.data.topPages) && Array.isArray(ov.data.topReferrers), ov.data);
-check("top pages contain normalized paths", ov.data.topPages.some((p) => p.path === "/games/[id]/results") && ov.data.topPages.some((p) => p.path === "/join/[token]"), ov.data.topPages);
+check("top pages contain normalized paths", ov.data.topPages.some((p) => p.path === "/games/[id]/edit") && ov.data.topPages.some((p) => p.path === "/join/[token]"), ov.data.topPages);
 check("no raw ids / query / unknown paths stored", ov.data.topPages.every((p) => !p.path.includes("?") && !/[0-9a-f]{8}-/.test(p.path) && !p.path.includes("wp-admin")), ov.data.topPages);
 check("referrer stored as host only", ov.data.topReferrers.some((r) => r.host === "www.google.com"), ov.data.topReferrers);
-check("bot not counted", !ov.data.topPages.some((p) => p.path === "/learn" && p.views > 0 && false));
+const learnViews = async () => (await call("GET", "/admin/analytics/overview", admin)).data.topPages.find((p) => p.path === "/learn/rules")?.views ?? 0;
+const before = await learnViews();
+await pv("/learn/rules", "", { "User-Agent": "Googlebot/2.1" });
+await pv("/learn/rules", "", { "User-Agent": "curl/8.4.0" });
+check("bots are not counted", (await learnViews()) === before);
+await pv("/learn/rules", "", UA);
+check("real browser counted once", (await learnViews()) === before + 1);
 check("invalid date -> 400", (await call("GET", "/admin/analytics/overview?from=garbage", admin)).status === 400);
 check("from after to -> 400", (await call("GET", "/admin/analytics/overview?from=2026-02-01&to=2026-01-01", admin)).status === 400);
 const ranged = await call("GET", "/admin/analytics/overview?from=2020-01-01&to=2020-01-31", admin);
