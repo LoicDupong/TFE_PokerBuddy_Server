@@ -44,6 +44,12 @@ export default function notificationModel(sequelize) {
             allowNull: false,
             defaultValue: false,
         },
+        // Paramètres structurés (noms, titre de partie…) : le client rend le texte dans sa langue,
+        // `message` (anglais) reste le repli pour les anciennes lignes et l'admin
+        params: {
+            type: DataTypes.JSONB,
+            allowNull: true,
+        },
         referenceId: {
             type: DataTypes.UUID,
             allowNull: true,

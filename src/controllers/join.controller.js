@@ -21,7 +21,7 @@ async function checkGuestAnswer(game, status, selfId = null) {
 
 async function notifyHost(game, guestName, status) {
     const text = status === "accepted" ? "accepted" : "declined";
-    await createNotification(game.hostId, "game_invite_responded", `${guestName} (guest) ${text} your invitation to "${game.name}"`, game.id);
+    await createNotification(game.hostId, "game_invite_responded", `${guestName} (guest) ${text} your invitation to "${game.name}"`, game.id, { username: guestName, guest: true, status: text, gameName: game.name });
 }
 
 const joinController = {
@@ -183,7 +183,7 @@ const joinController = {
                 }
                 if (existing) await existing.update({ status: "refused" });
                 else await db.GamePlayer.create({ gameId: game.id, userId: req.user.id, userName: req.user.username, status: "refused" });
-                await createNotification(game.hostId, "game_invite_responded", `${req.user.username} declined your invitation to "${game.name}"`, game.id);
+                await createNotification(game.hostId, "game_invite_responded", `${req.user.username} declined your invitation to "${game.name}"`, game.id, { username: req.user.username, status: "declined", gameName: game.name });
                 return res.status(existing ? 200 : 201).json({ status: "refused", gameId: game.id, gameName: game.name });
             }
 

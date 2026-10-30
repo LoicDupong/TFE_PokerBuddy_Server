@@ -26,7 +26,7 @@ const friendController = {
             });
             if (reversePending) {
                 await reversePending.update({ status: "accepted" });
-                await createNotification(friendId, 'friend_accepted', `${req.user.username} accepted your friend request`, reversePending.id);
+                await createNotification(friendId, 'friend_accepted', `${req.user.username} accepted your friend request`, reversePending.id, { username: req.user.username });
                 return res.status(200).json({ message: "Friend request accepted", invite: reversePending });
             }
 
@@ -57,7 +57,7 @@ const friendController = {
 
             if (declined) {
                 await declined.update({ userId: req.user.id, friendId, status: "pending" });
-                await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, declined.id);
+                await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, declined.id, { username: req.user.username });
                 return res.status(201).json({ message: "Friend request sent", invite: declined });
             }
 
@@ -67,7 +67,7 @@ const friendController = {
                 status: "pending",
             });
 
-            await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, invite.id);
+            await createNotification(friendId, 'friend_request', `${req.user.username} sent you a friend request`, invite.id, { username: req.user.username });
             res.status(201).json({ message: "Friend request sent", invite });
         } catch (error) {
             console.error("Send invite error:", error);
@@ -111,7 +111,7 @@ const friendController = {
 
             if (action === "accept") {
                 await invite.update({ status: "accepted" });
-                await createNotification(invite.userId, 'friend_accepted', `${req.user.username} accepted your friend request`, invite.id);
+                await createNotification(invite.userId, 'friend_accepted', `${req.user.username} accepted your friend request`, invite.id, { username: req.user.username });
             } else if (action === "decline") {
                 await invite.update({ status: "declined" });
             } else {

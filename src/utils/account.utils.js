@@ -108,10 +108,11 @@ export async function cancelUnfinishedGames(games, { transaction, excludeUserId 
  * Après le commit : notification game_cancelled (referenceId null, la partie n'existe plus).
  * @param {{ games: { id: string, name: string }[], recipients: { gameId: string, userId: string }[] }} cancellation
  * @param {(gameName: string) => string} messageFor  phrase complète (ex. raison de l'annulation)
+ * @param {"host_deleted"|"admin"} [reason]  transmis au client dans params pour traduire le texte
  */
-export async function notifyCancelledGames({ games, recipients }, messageFor) {
+export async function notifyCancelledGames({ games, recipients }, messageFor, reason = "host_deleted") {
     const names = new Map(games.map((g) => [g.id, g.name]));
-    await Promise.all(recipients.map((r) => createNotification(r.userId, "game_cancelled", messageFor(names.get(r.gameId)), null)));
+    await Promise.all(recipients.map((r) => createNotification(r.userId, "game_cancelled", messageFor(names.get(r.gameId)), null, { gameName: names.get(r.gameId), reason })));
 }
 
 // LIKE : le pseudo est une valeur littérale, pas un motif
@@ -248,12 +249,13 @@ export async function deleteAccount(userId, { actorId = null } = {}) {
     // Après le commit : effets externes et notifications (non bloquants)
     await removeStoredAvatar(outcome.previousAvatar, userId);
 
-    await notifyCancelledGames(outcome.cancellation, (name) => `"${name}" was cancelled because the host deleted their account`);
+    await notifyCancelledGames(outcome.cancellation, (name) => `"${name}" was cancelled because the host deleted their account`, "host_deleted");
     await Promise.all(outcome.participations.filter((p) => p.status === "accepted").map((p) => createNotification(
         p.game.hostId,
         "game_invite_responded",
         `A player who was coming to "${p.game.name}" deleted their account`,
-        p.game.id
+        p.game.id,
+        { gameName: p.game.name, reason: "player_deleted" }
     )));
 
     return {

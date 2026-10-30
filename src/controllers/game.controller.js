@@ -239,7 +239,7 @@ const gameController = {
 
             // Non-blocking notifications — after commit, like invitePlayer does
             await Promise.all(invitedFriends.map((f) =>
-                createNotification(f.id, 'game_invite', `You were invited to "${newGame.name}"`, newGame.id)
+                createNotification(f.id, 'game_invite', `You were invited to "${newGame.name}"`, newGame.id, { gameName: newGame.name })
             ));
 
             res.status(201).json({ game: newGame });
