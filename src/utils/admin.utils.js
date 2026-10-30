@@ -65,8 +65,9 @@ export function parseGrantArgs(argv) {
         const [flag, inline] = argv[i].split(/=(.*)/s);
         if (flag === "--dry-run") args.dryRun = true;
         else if (flag === "--username" || flag === "--email") {
-            const value = inline ?? argv[++i];
-            args[flag.slice(2)] = typeof value === "string" && !value.startsWith("--") ? value.trim() : null;
+            // Valeur manquante (option suivante ou fin) : null, sans consommer l'option suivante
+            const value = inline ?? (argv[i + 1]?.startsWith("--") ? undefined : argv[++i]);
+            args[flag.slice(2)] = typeof value === "string" && value.trim() ? value.trim() : null;
         }
     }
     return args;
