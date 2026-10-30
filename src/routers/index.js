@@ -13,6 +13,7 @@ import supportRouter from "./support.route.js";
 import adminSupportRouter from "./adminSupport.route.js";
 import analyticsRouter from "./analytics.route.js";
 import adminAnalyticsRouter from "./adminAnalytics.route.js";
+import adminRouter from "./admin.route.js";
 
 export const apiRouter = Router();
 
@@ -30,3 +31,4 @@ apiRouter.use("/support", supportRouter);
 apiRouter.use("/admin/support", adminSupportRouter);
 apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/admin/analytics", adminAnalyticsRouter);
+apiRouter.use("/admin", adminRouter);

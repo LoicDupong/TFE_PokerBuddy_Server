@@ -1,5 +1,6 @@
 import db from "../models/index.js";
 import { createNotification } from "../utils/notification.utils.js";
+import { isUuid } from "../utils/validation.utils.js";
 
 const inviteController = {
     // 🔹 Inviter un user ou guest
@@ -25,8 +26,10 @@ const inviteController = {
 
             // Cas 1 : user existant
             if (userId) {
-                const existingUser = await db.User.findByPk(userId);
-                if (!existingUser) {
+                // Id mal formé : 404 plutôt qu'une erreur Postgres (500)
+                const existingUser = isUuid(userId) ? await db.User.findByPk(userId) : null;
+                // Compte supprimé ou désactivé : introuvable, comme dans la recherche
+                if (!existingUser || existingUser.deletedAt || existingUser.disabledAt) {
                     return res.status(404).json({ error: "User not found" });
                 }
 

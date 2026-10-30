@@ -11,7 +11,8 @@ const friendController = {
 
             const { friendId } = req.body;
 
-            if (!isUuid(friendId) || !(await db.User.findByPk(friendId, { attributes: ["id"] }))) {
+            // Compte supprimé ou désactivé : introuvable, comme dans la recherche
+            if (!isUuid(friendId) || !(await db.User.findOne({ where: { id: friendId, deletedAt: null, disabledAt: null }, attributes: ["id"] }))) {
                 return res.status(404).json({ error: "User not found" });
             }
 
