@@ -60,3 +60,34 @@ export const passwordCheckLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: "Too many attempts, please try again in 15 minutes" },
 });
+
+// Création de tickets de support : 5 par compte et par heure (anti-spam du back-office).
+// À placer après authorizeMiddleware() : la clé est l'id du compte (l'IP en secours).
+export const supportTicketLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    keyGenerator: (req) => (req.user?.id ? `user:${req.user.id}` : ipKeyGenerator(req.ip)),
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many support requests, please try again later" },
+});
+
+// Messages dans un ticket : 30 par compte et par 15 min
+export const supportMessageLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    keyGenerator: (req) => (req.user?.id ? `user:${req.user.id}` : ipKeyGenerator(req.ip)),
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many messages, please try again in a few minutes" },
+});
+
+// Pings de mesure d'audience (public, sans cookie ni identifiant) : 120 par IP et par minute.
+// L'IP ne sert qu'à la limite en mémoire, elle n'est jamais stockée.
+export const analyticsLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many requests" },
+});
