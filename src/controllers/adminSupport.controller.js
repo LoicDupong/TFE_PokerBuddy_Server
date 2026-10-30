@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import db from "../models/index.js";
 import { createNotification } from "../utils/notification.utils.js";
+import { logAdminAction } from "../utils/adminAudit.utils.js";
 import {
     SUPPORT_STATUSES, escapeLike, parsePagination, toMessageView, toTicketView, validateMessageBody,
 } from "../utils/support.utils.js";
@@ -77,6 +78,11 @@ const adminSupportController = {
                 // Première réponse du staff : le ticket est pris en charge
                 if (ticket.status === "new") ticket.status = "in_progress";
                 await ticket.save({ transaction });
+                // Audit dans la même transaction ; le corps du message n'est jamais journalisé (vie privée)
+                await logAdminAction({
+                    actorId: req.user.id, action: "support.reply", targetType: "support_ticket", targetId: ticket.id,
+                    details: { messageId: created.id, status: ticket.status },
+                }, { transaction });
                 return created;
             });
 
@@ -98,8 +104,17 @@ const adminSupportController = {
             const ticket = await db.SupportTicket.findByPk(req.params.id);
             if (!ticket) return res.status(404).json({ error: "Ticket not found" });
 
-            ticket.status = status;
-            await ticket.save();
+            const previousStatus = ticket.status;
+            if (previousStatus !== status) {
+                await db.sequelize.transaction(async (transaction) => {
+                    ticket.status = status;
+                    await ticket.save({ transaction });
+                    await logAdminAction({
+                        actorId: req.user.id, action: "support.status", targetType: "support_ticket", targetId: ticket.id,
+                        details: { from: previousStatus, to: status },
+                    }, { transaction });
+                });
+            }
             return res.status(200).json({ ticket: toTicketView(ticket) });
         } catch (error) {
             console.error("admin updateTicket error:", error);
