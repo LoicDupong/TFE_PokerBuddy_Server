@@ -62,6 +62,12 @@ export default function userModel(sequelize) {
             allowNull: true,
             defaultValue: null,
         },
+        // Langue préférée (emails et notifications) : "en" | "fr"
+        locale: {
+            type: DataTypes.STRING(5),
+            allowNull: false,
+            defaultValue: "en",
+        },
         // Mot de passe oublié : seul le hash du jeton est stocké, jamais le jeton lui-même
         passwordResetTokenHash: {
             type: DataTypes.STRING,

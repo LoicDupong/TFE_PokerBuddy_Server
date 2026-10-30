@@ -10,7 +10,7 @@ import {
     validatePassword,
     validateUsername,
 } from "../utils/validation.utils.js";
-import { toSafeUser } from "../utils/user.utils.js";
+import { isSupportedLocale, localeOf, toSafeUser } from "../utils/user.utils.js";
 import { isReservedEmail } from "../utils/account.utils.js";
 import { sendMail } from "../utils/mail.utils.js";
 import {
@@ -72,7 +72,7 @@ async function processPasswordResetRequest(email) {
             username: user.username,
             resetUrl: buildResetUrl(getAppUrl(), token),
             expiresInMinutes: RESET_TOKEN_TTL_MS / 60000,
-        });
+        }, localeOf(user));
         await sendMail({ to: user.email, ...mail });
     } catch (error) {
         console.error("Password reset email failed:", error);
@@ -84,7 +84,7 @@ function notifyPasswordChanged(user) {
     const mail = passwordChangedEmail({
         username: user.username,
         forgotPasswordUrl: `${getAppUrl()}/auth/forgot-password`,
-    });
+    }, localeOf(user));
     sendMail({ to: user.email, ...mail }).catch((error) => console.error("Password changed email failed:", error));
 }
 
@@ -121,7 +121,9 @@ const authController = {
             const newUser = await db.User.create({
                 username,
                 email,
-                password: hash
+                password: hash,
+                // Langue de l'interface à l'inscription (facultatif)
+                ...(isSupportedLocale(req.body.locale) ? { locale: req.body.locale } : {}),
             });
 
             // Rattache la réponse d'invité (lien "claim") au nouveau compte ; un claim invalide ne bloque jamais l'inscription
@@ -187,7 +189,7 @@ const authController = {
 
             const user = await db.User.findByPk(req.user.id, {
                 // tokenVersion : nécessaire pour renouveler le token, jamais renvoyé
-                attributes: ["id", "username", "email", "avatar", "role", "tokenVersion"],
+                attributes: ["id", "username", "email", "avatar", "role", "locale", "tokenVersion"],
             });
 
             if (!user) return res.status(404).json({ error: "User not found" });
@@ -264,7 +266,7 @@ const authController = {
             const tokenHash = hashResetToken(token);
             const user = await db.User.findOne({
                 where: { passwordResetTokenHash: tokenHash },
-                attributes: ["id", "username", "email", "passwordResetExpiresAt", "deletedAt", "disabledAt"],
+                attributes: ["id", "username", "email", "locale", "passwordResetExpiresAt", "deletedAt", "disabledAt"],
             });
             if (!user || isResetTokenExpired(user.passwordResetExpiresAt) || user.deletedAt || user.disabledAt) {
                 return res.status(400).json(INVALID_RESET_LINK);

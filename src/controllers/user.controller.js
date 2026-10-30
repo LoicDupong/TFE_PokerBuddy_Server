@@ -7,6 +7,7 @@ import { findUserByUsername, validateUsername } from "../utils/validation.utils.
 import { removeAvatar, storeAvatar } from "../middlewares/upload.middleware.js";
 import { getPlayerStats } from "../utils/financeStats.utils.js";
 import { AccountError, deleteAccount } from "../utils/account.utils.js";
+import { isSupportedLocale } from "../utils/user.utils.js";
 
 const userController = {
   getUser: async (req, res) => {
@@ -43,7 +44,7 @@ const userController = {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
       const user = await db.User.findByPk(req.user.id, {
-        attributes: ["id", "username", "email", "avatar", "description", "createdAt"],
+        attributes: ["id", "username", "email", "avatar", "description", "locale", "createdAt"],
         include: [
           {
             model: db.User,
@@ -94,7 +95,7 @@ const userController = {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const { username, description } = req.body;
+      const { username, description, locale } = req.body;
       const user = await db.User.findByPk(req.user.id);
 
       if (!user) {
@@ -120,6 +121,11 @@ const userController = {
         const bio = String(description).trim();
         if (bio.length > 500) return res.status(400).json({ error: "Bio too long (500 characters max)" });
         fieldsToUpdate.description = bio || null;
+      }
+
+      if (locale !== undefined) {
+        if (!isSupportedLocale(locale)) return res.status(400).json({ error: "Unsupported locale" });
+        fieldsToUpdate.locale = locale;
       }
 
       // Avatar : uniquement un fichier uploadé (plus d'URL arbitraire envoyée en texte),
@@ -151,6 +157,7 @@ const userController = {
           email: user.email,
           avatar: user.avatar,
           description: user.description,
+          locale: user.locale,
         },
         token,
       });

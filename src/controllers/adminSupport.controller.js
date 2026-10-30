@@ -87,7 +87,7 @@ const adminSupportController = {
             });
 
             // Notification de l'auteur, après le commit
-            await createNotification(ticket.userId, "support_reply", `Support replied to "${ticket.subject}"`, ticket.id);
+            await createNotification(ticket.userId, "support_reply", `Support replied to "${ticket.subject}"`, ticket.id, { subject: ticket.subject });
 
             return res.status(201).json({ message: toMessageView(message, { forAdmin: true }), ticket: toTicketView(ticket) });
         } catch (error) {

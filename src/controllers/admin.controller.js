@@ -312,7 +312,7 @@ const adminController = {
                 return result;
             });
 
-            await notifyCancelledGames(cancellation, (name) => `"${name}" was cancelled by an administrator`);
+            await notifyCancelledGames(cancellation, (name) => `"${name}" was cancelled by an administrator`, "admin");
             res.status(200).json({ message: "Game cancelled", notified: cancellation.recipients.length });
         } catch (error) {
             sendError(res, error, "cancelGame");

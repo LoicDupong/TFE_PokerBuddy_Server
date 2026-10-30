@@ -39,7 +39,7 @@ const inviteController = {
                 }
 
                 const invited = await db.GamePlayer.create({ gameId, userId, userName: existingUser.username, status: "pending" });
-                await createNotification(userId, 'game_invite', `You were invited to "${game.name}"`, game.id);
+                await createNotification(userId, 'game_invite', `You were invited to "${game.name}"`, game.id, { gameName: game.name });
                 return res.status(201).json({ message: "User invited", invited });
             }
 
@@ -181,7 +181,7 @@ const inviteController = {
 
             await invite.update({ status });
             const statusText = status === 'accepted' ? 'accepted' : 'declined';
-            await createNotification(invite.game.hostId, 'game_invite_responded', `${req.user.username} ${statusText} your invitation to "${invite.game.name}"`, invite.game.id);
+            await createNotification(invite.game.hostId, 'game_invite_responded', `${req.user.username} ${statusText} your invitation to "${invite.game.name}"`, invite.game.id, { username: req.user.username, status: statusText, gameName: invite.game.name });
             return res.status(200).json({ message: "Invite updated", invite });
         } catch (error) {
             console.error("Respond invite error:", error);

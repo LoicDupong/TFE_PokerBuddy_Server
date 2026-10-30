@@ -165,7 +165,7 @@ const resultsController = {
             const players = await db.GamePlayer.findAll({ where: { gameId: game.id }, attributes: ["userId"] });
             const notifyPromises = players
                 .filter(p => p.userId && p.userId !== game.hostId)
-                .map(p => createNotification(p.userId, 'game_result', `Results for "${game.name}" are in`, game.id));
+                .map(p => createNotification(p.userId, 'game_result', `Results for "${game.name}" are in`, game.id, { gameName: game.name }));
             await Promise.all(notifyPromises);
 
             // Non-blocking cleanup — remove the result reminder now that the game is finished
