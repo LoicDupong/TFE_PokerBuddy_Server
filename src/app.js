@@ -16,12 +16,14 @@ app.set("trust proxy", 1);
 app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || "*",
 }));
-app.use(morgan("tiny"));
+// Format "tiny" sans la query string : une recherche (email, pseudo) ne doit pas finir dans les logs
+morgan.token("path", (req) => req.originalUrl.split("?")[0]);
+app.use(morgan(":method :path :status :res[content-length] - :response-time ms"));
 app.use(express.json());
 
 // Simple logger middleware
 app.use((req, res, next) => {
-  console.log("➡️", req.method, req.url);
+  console.log("➡️", req.method, req.originalUrl.split("?")[0]);
   next();
 });
 
